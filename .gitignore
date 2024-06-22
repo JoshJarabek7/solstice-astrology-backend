@@ -216,3 +216,4 @@ de421.bsp
 venv
 .pytest_cache
 .env
+.DS_Store
