@@ -8,5 +8,11 @@ logger = logging.getLogger(__name__)
 
 
 app = FastAPI()
+
+@app.get("/check")
+async def check_health():
+    return {"success": True}
+
+    
 app.include_router(astrology_router)
 app.include_router(personality_router)
