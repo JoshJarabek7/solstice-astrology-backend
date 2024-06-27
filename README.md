@@ -4,7 +4,7 @@ Solstice is an 18+ Apple Exclusive application that ties social, dating, gaming,
 
 It's currently being built out, however, the personality and astrology comparison backend are mostly complete.
 
-It will be one of the many endpoints that the SwiftUI application for iOS, macOS, iPadOS, visionOS, and tvOS will all collectively use for Astrology based features.
+It will be one of the many endpoints that the SwiftUI application for iOS, macOS, iPadOS, visionOS, and tvOS will all collectively use for Astrology and Personality based features.
 
 <p align="center">
   <img src="./assets/LightSplash.png" alt="light mode splash screen" height="500"/>
@@ -30,7 +30,7 @@ This repository contains the backend service for astrology and personality featu
 
 ### Recommendation Engine
 
-The main purpose of this codebase is to calculate compatibility between two people's entire astrological charts. Think of it like Co-Star, but for dating. This service will be a component of the broader recommendation engine for suggesting posts, profiles, and potential matches. Other components will include psychological analysis scores and native multi-modal AI embeddings (video, text, images, etc.), all contributing to a generative adversarial network (GAN) for comprehensive recommendations.
+The main purpose of this codebase is to calculate compatibility between two people's entire astrological charts, as well as their 46 different personality traits. Think of it like Co-Star, Myers-Briggs, and Hinge merged into one. This service will be a component of the broader recommendation engine for suggesting posts, profiles, and potential matches. Other components will include psychological analysis scores and native multi-modal AI embeddings (video, text, images, etc.), all contributing to a generative adversarial network (GAN) for comprehensive recommendations.
 
 ### Gaming
 
