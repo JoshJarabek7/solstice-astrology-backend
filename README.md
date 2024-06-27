@@ -115,6 +115,11 @@ Solstice will include psychoanalysis features inspired by Duolicious. Users will
 
 These features will add depth to user profiles, making matchmaking more accurate and engaging.
 
+## Astrology
+- **Chart Creation:** Generation of birth and natal charts.
+- **Compatibility & Explanation:** Calculation of complete compatibility between two users charts with in-depth descriptions for each sign for every celestial body explaining why they receied that score.
+- **Twin Flame & Soulmate:** If the planets align, there should be a "Twin Flame" or "Soulmate" badge appearing on that user's profile.
+
 ## License
 
 This backend currently uses the GNU Affero General Public License, as required by the Swiss Ephemeris and Duolicious.
