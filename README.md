@@ -7,8 +7,8 @@ It's currently being built out, however, the personality and astrology compariso
 It will be one of the many endpoints that the SwiftUI application for iOS, macOS, iPadOS, visionOS, and tvOS will all collectively use for Astrology based features.
 
 <p align="center">
-  <img src="./assets/LightSplash.png" alt="light mode splash screen" height="300"/>
-  <img src="./assets/DarkSplash.png" alt="dark mode splash screen" height="300"/>
+  <img src="./assets/LightSplash.png" alt="light mode splash screen" height="500"/>
+  <img src="./assets/DarkSplash.png" alt="dark mode splash screen" height="500"/>
 </p>
 
 ## Table of Contents
