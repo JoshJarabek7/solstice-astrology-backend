@@ -7,6 +7,9 @@ from timezonefinder import TimezoneFinder
 from typing import Literal, List, Dict, Tuple, Union
 from pydantic import BaseModel, Field
 from enum import Enum
+import logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Define constants
 SIGNS = Literal['aries', 'taurus', 'gemini', 'cancer', 'leo', 'virgo', 'libra', 'scorpio', 'sagittarius', 'capricorn', 'aquarius', 'pisces']
@@ -354,48 +357,13 @@ class Astrology:
         Returns:
             AstrologyChart: The computed astrology chart.
         """
-        houses, ascendant = self._calculate_houses_and_ascendant(house_system)
+        houses, ascendant = self._calculate_houses_and_ascendant("Porphyry")
         self._calculate_body_positions()
         self._assign_houses_to_bodies(houses)
         self._assign_signs_to_bodies()
         
-        ascendant_sign = self._get_sign_for_position(ascendant[0])
+        ascendant_sign = self._get_sign_for_position(ascendant)
         return self._create_astrology_chart(str(ascendant_sign).lower())
-
-    def _calculate_houses_and_ascendant(self, house_system: str) -> Tuple[List[float], dict]:
-        """Calculates the houses and ascendant using the specified house system."""
-        hsys = self.HOUSE_SYSTEMS.get(house_system, b"O")  # Default to Porphyry
-        flags = swe.FLG_SWIEPH + swe.FLG_SPEED
-        houses, ascmc = swe.houses(self.julian_day, self.latitude, self.longitude, hsys)
-        return houses, ascmc
-
-    def _calculate_body_positions(self):
-        """Calculates the positions of the celestial bodies."""
-        flags = swe.FLG_SWIEPH + swe.FLG_SPEED
-        for body_name, body_id in self.BODIES.items():
-            position, _ = swe.calc(self.julian_day, body_id, flags)
-            self.positions[body_name] = position[0]
-
-    def _assign_houses_to_bodies(self, houses: List[float]):
-        """Assigns houses to the celestial bodies."""
-        for body_name, body_longitude in self.positions.items():
-            for i in range(12):
-                if houses[i] <= body_longitude < houses[i + 1]:
-                    self.body_houses[body_name] = i + 1
-                    break
-                elif houses[i] > houses[i + 1]:
-                    if body_longitude >= houses[i] or body_longitude < houses[i + 1]:
-                        self.body_houses[body_name] = i + 1
-                        break
-
-    def _assign_signs_to_bodies(self):
-        """Assigns zodiac signs to the celestial bodies."""
-        for body_name, body_longitude in self.positions.items():
-            self.body_signs[body_name] = self._get_sign_for_position(body_longitude)
-
-    def _get_sign_for_position(self, position: float) -> str:
-        """Gets the zodiac sign for a given position."""
-        return self.SIGNS[int(position / 30)]
 
     def _create_astrology_chart(self, ascendant: str) -> AstrologyChart:
         """Creates the astrology chart."""
@@ -414,12 +382,60 @@ class Astrology:
         }
 
         for body_name in self.BODIES.keys():
+
             chart_data[body_name.lower()] = self._create_astrology_individual(
                 self.body_signs[body_name].lower(),
                 self.body_houses[body_name]
             )
 
         return AstrologyChart(**chart_data)
+
+    def _calculate_houses_and_ascendant(self, house_system: str) -> Tuple[List[float], float]:
+        """Calculates the houses and ascendant using the specified house system."""
+        hsys = self.HOUSE_SYSTEMS.get(house_system, b"O")  # Default to Porphyry
+        flags = swe.FLG_SWIEPH + swe.FLG_SPEED
+        try:
+            result = swe.houses(self.julian_day, self.latitude, self.longitude, hsys)
+            houses = result[0]
+            ascendant = result[1][0]  # Ensure this is a single float value
+            return houses, ascendant
+        except Exception as e:
+            logger.error(f"Error in swe.houses(): {e}")
+            raise
+
+    def _calculate_body_positions(self):
+        """Calculates the positions of the celestial bodies."""
+        flags = swe.FLG_SWIEPH + swe.FLG_SPEED
+        for body_name, body_id in self.BODIES.items():
+            position, _ = swe.calc(self.julian_day, body_id, flags)
+            self.positions[body_name] = position[0]
+
+    def _assign_houses_to_bodies(self, houses: List[float]):
+        """Assigns houses to the celestial bodies."""
+        for body_name, body_longitude in self.positions.items():
+            assigned = False
+            for i in range(len(houses) - 1):  # Ensure valid indexing
+                if houses[i] <= body_longitude < houses[i + 1]:
+                    self.body_houses[body_name] = i + 1
+                    assigned = True
+                    break
+                elif houses[i] > houses[i + 1]:  # Handle wrap-around case
+                    if body_longitude >= houses[i] or body_longitude < houses[i + 1]:
+                        self.body_houses[body_name] = i + 1
+                        assigned = True
+                        break
+            if not assigned:
+                logger.warning(f"Could not assign house for {body_name} at longitude {body_longitude}")
+                self.body_houses[body_name] = 0  # Or handle as needed
+
+    def _assign_signs_to_bodies(self):
+        """Assigns zodiac signs to the celestial bodies."""
+        for body_name, body_longitude in self.positions.items():
+            self.body_signs[body_name] = self._get_sign_for_position(body_longitude)
+
+    def _get_sign_for_position(self, position: float) -> str:
+        """Gets the zodiac sign for a given position."""
+        return self.SIGNS[int(position / 30)]
 
     @staticmethod
     def _create_astrology_individual(zodiac_sign: str, house_number: int) -> AstrologyIndividual:
@@ -444,7 +460,25 @@ class ComparisonHandler:
         Returns:
             AllComparedWithOverallScore: The comparison result.
         """
-        return self._compare_two_charts()
+        try:
+            return self._compare_two_charts()
+        except Exception as e:
+            logger.error(e)
+            # Return a default AllComparedWithOverallScore instance in case of error
+            default_compared = AllCompared(
+                sun=ComparedSign(),
+                moon=ComparedSign(),
+                ascendant=ComparedSign(),
+                mercury=ComparedSign(),
+                venus=ComparedSign(),
+                mars=ComparedSign(),
+                jupiter=ComparedSign(),
+                saturn=ComparedSign(),
+                uranus=ComparedSign(),
+                neptune=ComparedSign(),
+                pluto=ComparedSign()
+            )
+            return AllComparedWithOverallScore(all_compared=default_compared, overall_score=0.0)
 
     def _compare_two_signs(self, celestial: Planet, first_zodiac: SIGNS, second_zodiac: SIGNS) -> ComparedSign:
         """Compares two zodiac signs for a given celestial body.
@@ -457,30 +491,39 @@ class ComparisonHandler:
         Returns:
             ComparedSign: The comparison result.
         """
-        celestial_body: IndividualPlanet = self.planets.__getattribute__(celestial.value)
-        first_zodiac_in_celestial_body: SignAttributes = celestial_body.signs.__getattribute__(first_zodiac)
-        compatibility_data: ComparedSign = first_zodiac_in_celestial_body.compatibility.__getattribute__(second_zodiac)
-        return ComparedSign(description=compatibility_data.description, compatibility_score=compatibility_data.compatibility_score)
-    
+        try:
+            celestial_body: IndividualPlanet = self.planets.__getattribute__(celestial.value.lower())
+            first_zodiac_in_celestial_body: SignAttributes = celestial_body.signs.__getattribute__(first_zodiac)
+            compatibility_data: ComparedSign = first_zodiac_in_celestial_body.compatibility.__getattribute__(second_zodiac)
+            return ComparedSign(description=compatibility_data.description, compatibility_score=compatibility_data.compatibility_score)
+        except AttributeError as e:
+            logger.error(f"AttributeError in _compare_two_signs: {e}")
+            return ComparedSign(description="Error: Sign not found", compatibility_score=0.0)
+
     def _compare_two_charts(self):
         """Compares two astrology charts and calculates the overall compatibility score."""
-
         try:
             p1_astrology = Astrology(latitude=self.p1.latitude, longitude=self.p1.longitude, birth_datetime=self.p1.birth_datetime)
             p2_astrology = Astrology(latitude=self.p2.latitude, longitude=self.p2.longitude, birth_datetime=self.p2.birth_datetime)
             p1_data = p1_astrology.compute_houses_and_ascendant()
+            # logger.info(f"p1_data: {p1_data}")
             p2_data = p2_astrology.compute_houses_and_ascendant()
+            
+            # Debug prints
+            # logger.info(f"p2_data: {p2_data}")
+
             sun_compatibility = self._compare_two_signs(celestial=Planet.SUN, first_zodiac=p1_data.sun.zodiac_sign, second_zodiac=p2_data.sun.zodiac_sign)
-            moon_compatibility = self._compare_two_signs(celestial=Planet.SUN, first_zodiac=p1_data.moon.zodiac_sign, second_zodiac=p2_data.moon.zodiac_sign)
-            ascendant_compatibility = self._compare_two_signs(celestial=Planet.SUN, first_zodiac=p1_data.ascendant, second_zodiac=p2_data.ascendant)
-            mercury_compatibility = self._compare_two_signs(celestial=Planet.SUN, first_zodiac=p1_data.mercury.zodiac_sign, second_zodiac=p2_data.mercury.zodiac_sign)
-            venus_compatibility = self._compare_two_signs(celestial=Planet.SUN, first_zodiac=p1_data.venus.zodiac_sign, second_zodiac=p2_data.venus.zodiac_sign)
-            mars_compatibility = self._compare_two_signs(celestial=Planet.SUN, first_zodiac=p1_data.mars.zodiac_sign, second_zodiac=p2_data.mars.zodiac_sign)
-            jupiter_compatibility = self._compare_two_signs(celestial=Planet.SUN, first_zodiac=p1_data.jupiter.zodiac_sign, second_zodiac=p2_data.jupiter.zodiac_sign)
-            saturn_compatibility = self._compare_two_signs(celestial=Planet.SUN, first_zodiac=p1_data.saturn.zodiac_sign, second_zodiac=p2_data.saturn.zodiac_sign)
-            uranus_compatibility = self._compare_two_signs(celestial=Planet.SUN, first_zodiac=p1_data.uranus.zodiac_sign, second_zodiac=p2_data.uranus.zodiac_sign)
-            neptune_compatibility = self._compare_two_signs(celestial=Planet.SUN, first_zodiac=p1_data.neptune.zodiac_sign, second_zodiac=p2_data.neptune.zodiac_sign)
-            pluto_compatibility = self._compare_two_signs(celestial=Planet.SUN, first_zodiac=p1_data.pluto.zodiac_sign, second_zodiac=p2_data.pluto.zodiac_sign)
+            moon_compatibility = self._compare_two_signs(celestial=Planet.MOON, first_zodiac=p1_data.moon.zodiac_sign, second_zodiac=p2_data.moon.zodiac_sign)
+            ascendant_compatibility = self._compare_two_signs(celestial=Planet.ASCENDANT, first_zodiac=p1_data.ascendant, second_zodiac=p2_data.ascendant)
+            mercury_compatibility = self._compare_two_signs(celestial=Planet.MERCURY, first_zodiac=p1_data.mercury.zodiac_sign, second_zodiac=p2_data.mercury.zodiac_sign)
+            venus_compatibility = self._compare_two_signs(celestial=Planet.VENUS, first_zodiac=p1_data.venus.zodiac_sign, second_zodiac=p2_data.venus.zodiac_sign)
+            mars_compatibility = self._compare_two_signs(celestial=Planet.MARS, first_zodiac=p1_data.mars.zodiac_sign, second_zodiac=p2_data.mars.zodiac_sign)
+            jupiter_compatibility = self._compare_two_signs(celestial=Planet.JUPITER, first_zodiac=p1_data.jupiter.zodiac_sign, second_zodiac=p2_data.jupiter.zodiac_sign)
+            saturn_compatibility = self._compare_two_signs(celestial=Planet.SATURN, first_zodiac=p1_data.saturn.zodiac_sign, second_zodiac=p2_data.saturn.zodiac_sign)
+            uranus_compatibility = self._compare_two_signs(celestial=Planet.URANUS, first_zodiac=p1_data.uranus.zodiac_sign, second_zodiac=p2_data.uranus.zodiac_sign)
+            neptune_compatibility = self._compare_two_signs(celestial=Planet.NEPTUNE, first_zodiac=p1_data.neptune.zodiac_sign, second_zodiac=p2_data.neptune.zodiac_sign)
+            pluto_compatibility = self._compare_two_signs(celestial=Planet.PLUTO, first_zodiac=p1_data.pluto.zodiac_sign, second_zodiac=p2_data.pluto.zodiac_sign)
+            
             all_compared = AllCompared(
                 sun=sun_compatibility,
                 moon=moon_compatibility,
@@ -515,7 +558,8 @@ class ComparisonHandler:
             result = AllComparedWithOverallScore(all_compared=all_compared, overall_score=formatted_score)
             return result
         except Exception as e:
-            print(f"ERROR: {e}")
+            logger.error(f"Error in _compare_two_charts: {e}")
+            raise
 
 """ 
 
@@ -526,7 +570,7 @@ APP ROUTES
 app = FastAPI()
 
 
-@app.post("/user/charts", response_model=AstrologyChart)
+@app.post("/api/astrology/user/charts", response_model=AstrologyChart)
 async def build_user_charts(request: InboundAstrologyChartSchema):
     """Builds the astrology chart for a user based on their birth details.
 
@@ -536,12 +580,13 @@ async def build_user_charts(request: InboundAstrologyChartSchema):
     try:
         astrology = Astrology(latitude=request.latitude, longitude=request.longitude, birth_datetime=request.birth_datetime)
         chart = astrology.compute_houses_and_ascendant()
+        print(chart)
         return jsonable_encoder(chart)
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/user/zodiac/description", response_model=OutboundAstrologyDescriptionSchema)
+@app.post("/api/astrology/user/zodiac/description", response_model=OutboundAstrologyDescriptionSchema)
 async def get_zodiac_description(request: InboundAstrologyDescriptionSchema):
     """Gets the zodiac description for a celestial body in a specific sign and house.
 
@@ -558,7 +603,7 @@ async def get_zodiac_description(request: InboundAstrologyDescriptionSchema):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/compare", response_model=AllComparedWithOverallScore)
+@app.post("/api/astrology/compare", response_model=AllComparedWithOverallScore)
 async def compare_two_charts(request: InboundCompareTwoCharts):
     """Compares two astrology charts and returns the comparison result.
 

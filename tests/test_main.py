@@ -6,7 +6,7 @@ from httpx import ASGITransport, AsyncClient
 @pytest.mark.asyncio
 async def test_build_user_charts():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac: # type: ignore
-        response = await ac.post("/user/charts", json={
+        response = await ac.post("/api/astrology/user/charts", json={
             "latitude": 40.7128,
             "longitude": -74.0060,
             "birth_datetime": "1990-01-01T12:00:00"
@@ -20,7 +20,7 @@ async def test_build_user_charts():
 @pytest.mark.asyncio
 async def test_get_zodiac_description():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac: # type: ignore
-        response = await ac.post("/user/zodiac/description", json={
+        response = await ac.post("/api/astrology/user/zodiac/description", json={
             "celestial_body": "sun",
             "zodiac_sign": "aries",
             "english_house_number": "first"
@@ -36,7 +36,7 @@ async def test_get_zodiac_description():
 @pytest.mark.asyncio
 async def test_compare_two_charts():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac: # type: ignore
-        response = await ac.post("/compare", json={
+        response = await ac.post("/api/astrology/compare", json={
             "person_1": {
                 "latitude": 40.7128,
                 "longitude": -74.0060,
@@ -55,6 +55,7 @@ async def test_compare_two_charts():
         assert "sun" in data["all_compared"]
         assert "moon" in data["all_compared"]
         assert "ascendant" in data["all_compared"]
+        print(f"Your overall astrological compatibility score is: {data['all_compared']}%")
 
 # Test for PlanetaryData Singleton
 def test_planetary_data_singleton():
