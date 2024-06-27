@@ -1,10 +1,12 @@
-# Solstice Social - Astrology Backend
+# Solstice Social - Backend
 
 Solstice is an 18+ Apple Exclusive application that ties social, dating, gaming, friend-making, and a life-simulator all into one.
 
-It's currently being built out, however, this astrology backend is pretty much complete, with plans to add some other comparison data down the road.
+It's currently being built out, however, the personality and astrology comparison backend are mostly complete.
 
 It will be one of the many endpoints that the SwiftUI application for iOS, macOS, iPadOS, visionOS, and tvOS will all collectively use for Astrology based features.
+
+![light mode splash screen](./assets/LightSplash.png) ![dark mode splash screen](./assets/DarkSplash.png)
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -19,7 +21,7 @@ It will be one of the many endpoints that the SwiftUI application for iOS, macOS
 
 ## Introduction
 
-This repository contains the backend service for astrology-based features in Solstice, an 18+ Apple Exclusive social application. The primary purpose of this service is to calculate astrological compatibility between users and provide related features.
+This repository contains the backend service for astrology and personality features in Solstice, an 18+ Apple Exclusive social application. The primary purpose of this service is to calculate astrological and personality trait compatibility between users and provide related features.
 
 ## Plans & Roadmap
 
@@ -88,7 +90,6 @@ Solstice will include psychoanalysis features inspired by Duolicious. Users will
 - **Sex Focus**
 - **Thriftiness**
 - **Thrill-seeking**
-- **Drug Friendliness**
 - **Emotional Openness in Relationships**
 - **Equanimity**
 - **Family Focus**
