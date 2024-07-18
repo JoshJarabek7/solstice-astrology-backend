@@ -157,6 +157,7 @@ router = KafkaRouter()
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 algorithm = "ES256"
+APP_ENV = os.getenv("APP_ENV", "")
 
 "--------------- USER ACCOUNT RELATED FUNCTIONS ---------------"
 apple_key_id = os.getenv("APPLE_KEY_ID", "")
@@ -193,7 +194,7 @@ azure_openai_embedding_model = os.getenv(
     "AZURE_OPENAI_EMBEDDING_MODEL",
     "text-embedding-3-large",
 )
-azure_openai_embedding_resource = os.getenv("AZURE_OPENAI_EMBEDDING_RESOURCE", "")
+azure_openai_embedding_resource = os.getenv("AZURE_EMBEDDING_RESOURCE_NAME", "")
 
 azure_storage_account_key = os.getenv("AZURE_STORAGE_ACCOUNT_KEY", "")
 azure_storage_connection_string = os.getenv("AZURE_STORAGE_CONNECTION_STRING", "")
@@ -265,6 +266,37 @@ settings = {
     },
 }
 
+class VerifiedUser(BaseModel):
+    """Represents a verified user."""
+
+    user_id: str
+    apple_id: str
+
+DEV_JWT_SECRET = os.getenv("DEV_JWT_SECRET", "")
+
+def create_dev_jwt(user_id: str) -> str:
+    payload = {
+        "sub": user_id,
+        "exp": datetime.now(UTC) + timedelta(days=30),
+        "iat": datetime.now(UTC),
+    }
+    return jwt.encode(
+        payload,
+        DEV_JWT_SECRET,
+        algorithm=algorithm,
+    )
+
+async def get_dev_user(token: str = Security(oauth2_scheme)) -> VerifiedUser:
+    try:
+        payload = jwt.decode(token, DEV_JWT_SECRET, algorithms=["HS256"])
+        return VerifiedUser(user_id=payload["sub"], apple_id=payload["sub"])
+    except jwt.ExpiredSignatureError as err:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Expired token.",
+        ) from err
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=400, detail="Invalid ID token.")
 
 class KafkaMessageTypes(IntEnum):
     NOTIFICATION = 0
@@ -667,13 +699,6 @@ async def refresh_user_token(refresh_token: str, user_id: str) -> AppleTokenResp
     return AppleTokenResponse(**response.json())
 
 
-class VerifiedUser(BaseModel):
-    """Represents a verified user."""
-
-    user_id: str
-    apple_id: str
-
-
 async def get_current_user(
     token: str = Security(oauth2_scheme),
 ) -> VerifiedUser:
@@ -689,6 +714,8 @@ async def get_current_user(
         HTTPException: If the token is invalid or verification fails.
     """
     try:
+        if APP_ENV == "dev":
+            return await get_dev_user(token)
         keys = await key_cache.get_keys()
         for jwk_key in keys:
             public_key = RSAAlgorithm.from_jwk(jwk_key)
@@ -1349,7 +1376,6 @@ class CreateUserResponse(BaseModel):
     refresh_token: str | None = None
     created_at: datetime
     last_login: datetime
-    token_id: str
 
 
 class RefreshTokenRequest(BaseModel):
@@ -1365,6 +1391,67 @@ class TokenResponse(BaseModel):
     refresh_token: str
     token_id: str
 
+@router.post("/api/dev/user", response_model=CreateUserResponse)
+async def create_dev_user_route(
+
+) -> CreateUserResponse:
+    """Create a new user for development purposes.
+    """
+    user_id = str(uuid4())
+    apple_id = f"fake-apple-id-{user_id}"
+    email = f"testuser{user_id}@example.com"
+    first_name = "Test"
+    last_name = "User"
+    now = datetime.now(UTC)
+
+    query = """
+    MERGE (user:User {apple_id: $apple_id})
+    ON CREATE SET
+        user.user_id = $user_id,
+        user.apple_id = $apple_id,
+        user.email = $email,
+        user.first_name = $first_name,
+        user.last_name = $last_name,
+        user.created_at = $created_at,
+        user.last_login = $last_login
+    ON MATCH SET
+        user.last_login = $last_login
+    RETURN user
+    """
+    async with driver.session() as session:
+        result = await session.run(
+            query,
+            {
+                "apple_id": apple_id,
+                "user_id": user_id,
+                "email": email,
+                "first_name": first_name,
+                "last_name": last_name,
+                "created_at": now.isoformat(),
+                "last_login": now.isoformat(),
+            },
+        )
+        record = await result.single()
+        if not record:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="User creation failed.",
+            )
+        user_data = record["user"]
+        access_token = create_dev_jwt(user_id)
+        return CreateUserResponse(
+            user_id=user_data["user_id"],
+            apple_id=user_data["apple_id"],
+            email=user_data["email"],
+            first_name=user_data.get("first_name", None),
+            last_name=user_data.get("last_name", None),
+            username=user_data.get("username", None),
+            display_name=user_data.get("display_name", None),
+            created_at=datetime.fromisoformat(user_data["created_at"]),
+            last_login=datetime.fromisoformat(user_data["last_login"]),
+            access_token=access_token,
+            refresh_token=None,
+        )
 
 @router.post("/api/user", response_model=CreateUserResponse)
 async def create_user_route(
@@ -1466,7 +1553,6 @@ async def create_user_route(
             last_login=datetime.fromisoformat(user_data["last_login"]),
             access_token=access_token,
             refresh_token=apple_refresh_token,
-            token_id=token_id,
         )
 
 
