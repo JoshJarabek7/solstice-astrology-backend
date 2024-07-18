@@ -993,6 +993,7 @@ class User(BaseModel):
     profile_location: tuple[float, float] | None = None
     created_at: datetime | None = None
     last_login: datetime | None = None
+    last_seen: datetime | None = None
     user_embeddings: list[float] | None = None
 
     # User traits
