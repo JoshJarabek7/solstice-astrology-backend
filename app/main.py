@@ -5985,40 +5985,40 @@ async def calculate_trait_scores(
     return normalized_scores
 
 
-async def get_trait_scores_paired(
-    user1_id: str,
-    user2_id: str,
-) -> tuple[dict[str, float], dict[str, float]]:
-    """Compare the trait scores for two users based on their answers and weights.
+# async def get_trait_scores_paired(
+#     user1_id: str,
+#     user2_id: str,
+# ) -> tuple[dict[str, float], dict[str, float]]:
+#     """Compare the trait scores for two users based on their answers and weights.
 
-    Args:
-        user1_id (str): The ID of the first user.
-        user2_id (str): The ID of the second user.
+#     Args:
+#         user1_id (str): The ID of the first user.
+#         user2_id (str): The ID of the second user.
 
-    Returns:
-        tuple[dict[str, float], dict[str, float]]: The trait scores for the two users.
-    """
-    users_answers = await get_both_user_answers(user1_id, user2_id)
+#     Returns:
+#         tuple[dict[str, float], dict[str, float]]: The trait scores for the two users.
+#     """
+#     users_answers = await get_both_user_answers(user1_id, user2_id)
 
-    user1_scores = await calculate_trait_scores(users_answers[0])
-    user2_scores = await calculate_trait_scores(users_answers[1])
+#     user1_scores = await calculate_trait_scores(users_answers[0])
+#     user2_scores = await calculate_trait_scores(users_answers[1])
 
-    return user1_scores, user2_scores
+#     return user1_scores, user2_scores
 
 
-async def get_trait_scores_self(
-    user_id: str,
-) -> dict[str, float]:
-    """Get the trait scores for a user.
+# async def get_trait_scores_self(
+#     user_id: str,
+# ) -> dict[str, float]:
+#     """Get the trait scores for a user.
 
-    Args:
-        user_id (str): The ID of the user.
+#     Args:
+#         user_id (str): The ID of the user.
 
-    Returns:
-        dict[str, float]: The trait scores for the user.
-    """
-    users_answers = await get_user_answers(user_id)
-    return await calculate_trait_scores(users_answers)
+#     Returns:
+#         dict[str, float]: The trait scores for the user.
+#     """
+#     users_answers = await get_user_answers(user_id)
+#     return await calculate_trait_scores(users_answers)
 
 
 @router.get("/api/personality/{user_id}")
@@ -6996,7 +6996,7 @@ async def get_dating_feed_route(
 
     ORDER BY score DESC, potential.last_seen DESC
     LIMIT $limit
-    """
+    """  # noqa: E501
 
     async with driver.session() as session:
         result = await session.run(
@@ -7697,49 +7697,49 @@ async def user_viewed_boops_page_event(event: MajorSectionViewed) -> None:
         )
 
 
-@router.subscriber("create-or-update-notification")
-async def create_or_update_notification(event: NotificationEvent):
-    query = """
-    MERGE (n:Notification {notification_type: $notification_type, reference_id: $reference_id})
-    ON CREATE SET
-        n.notification_id = apoc.create.uuid(),
-        n.content_preview = $content_preview,
-        n.post_type = $post_type,
-        n.action_count = 1,
-        n.is_read = false,
-        n.updated_at = datetime()
-    ON MATCH SET
-        n.action_count = n.action_count + 1,
-        n.is_read = false,
-        n.updated_at = datetime()
+# @router.subscriber("create-or-update-notification")
+# async def create_or_update_notification(event: NotificationEvent):
+#     query = """
+#     MERGE (n:Notification {notification_type: $notification_type, reference_id: $reference_id})
+#     ON CREATE SET
+#         n.notification_id = apoc.create.uuid(),
+#         n.content_preview = $content_preview,
+#         n.post_type = $post_type,
+#         n.action_count = 1,
+#         n.is_read = false,
+#         n.updated_at = datetime()
+#     ON MATCH SET
+#         n.action_count = n.action_count + 1,
+#         n.is_read = false,
+#         n.updated_at = datetime()
 
-    WITH n
+#     WITH n
 
-    MATCH (target_user:User {user_id: $target_user_id})
-    MERGE (target_user)-[:RECEIVED]->(n)
+#     MATCH (target_user:User {user_id: $target_user_id})
+#     MERGE (target_user)-[:RECEIVED]->(n)
 
-    WITH n
+#     WITH n
 
-    MATCH (action_user:User {user_id: $action_user_id})
-    MERGE (action_user)-[:ACTED_ON]->(n)
+#     MATCH (action_user:User {user_id: $action_user_id})
+#     MERGE (action_user)-[:ACTED_ON]->(n)
 
-    RETURN n as notification
-    """
-    async with driver.session() as session:
-        result = await session.run(
-            query,
-            {
-                "notification_type": event.notification_type,
-                "reference_id": event.reference_id,
-                "content_preview": event.content_preview,
-                "post_type": event.post_type,
-                "target_user_id": event.target_user_id,
-                "action_user_id": event.action_user_id,
-            },
-        )
-        record = await result.single()
-        if not record:
-            raise HTTPException(status_code=404, detail="Notification not found")
-        response = NotificationResponse(**record["notification"])
-        notification_manager = NotificationManager()
-        await notification_manager.broadcast(response, event.target_user_id)
+#     RETURN n as notification
+#     """
+#     async with driver.session() as session:
+#         result = await session.run(
+#             query,
+#             {
+#                 "notification_type": event.notification_type,
+#                 "reference_id": event.reference_id,
+#                 "content_preview": event.content_preview,
+#                 "post_type": event.post_type,
+#                 "target_user_id": event.target_user_id,
+#                 "action_user_id": event.action_user_id,
+#             },
+#         )
+#         record = await result.single()
+#         if not record:
+#             raise HTTPException(status_code=404, detail="Notification not found")
+#         response = NotificationResponse(**record["notification"])
+#         notification_manager = NotificationManager()
+#         await notification_manager.broadcast(response, event.target_user_id)
