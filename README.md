@@ -41,6 +41,7 @@ With the advent of Apple's Vision Pro, I believe virtual reality will become mor
 - **Apple Services Integration:** Apple Music & Shareplay, and CoreML for immersive experiences.
 - **Persistent MMORPG Elements:** The game continues with or without the user.
 - **Minigames:** Pirate-style Capture the Flag, Solstice rendition of Mario Kart, and more.
+- **Stats & Leaderboards:** Real-time tracking of most popular posts of the day to encourage the generation of quality content. Each day's leaderboard will be finalized at 9PM Central Time. Profiles will have a Stats card that shows things like how many times they've made it to the top 100 daily leaderboard.
 
 ## Mission, Values, and Reasoning
 
@@ -50,8 +51,8 @@ Solstice aims to create an inclusive and engaging social platform that combines 
 
 Solstice is designed as an 18+ exclusive network for several reasons:
 
-- **Ethical Considerations:** Social networks expose kids to adult content and bullying. We aim to provide a safer environment for adults.
-- **Integration with Apple Services:** Focusing on Apple-exclusive devices allows seamless integration with Apple Music, Apple TV, and more.
+- **Ethical Considerations:** Social networks expose kids to adult content, bullying, and predators. We aim to provide a safer environment for kids by pushing adults to strictly use an adults-only platform.
+- **Integration with Apple Services:** Focusing on Apple-exclusive devices allows seamless integration with Apple Music, Apple TV, and more, allowing users to collectively DJ the music during in-game house parties.
 - **Targeted Development:** Building for a finite number of devices with consistent OS, platform, and architecture simplifies development.
 
 ## Meme Creation and Detection
@@ -113,6 +114,11 @@ Solstice will include psychoanalysis features inspired by Duolicious. Users will
 - **Openness to Experience**
 
 These features will add depth to user profiles, making matchmaking more accurate and engaging.
+
+## Astrology
+- **Chart Creation:** Generation of birth and natal charts.
+- **Compatibility & Explanation:** Calculation of complete compatibility between two users charts with in-depth descriptions for each sign for every celestial body explaining why they receied that score.
+- **Twin Flame & Soulmate:** If the planets align, there should be a "Twin Flame" or "Soulmate" badge appearing on that user's profile.
 
 ## License
 
