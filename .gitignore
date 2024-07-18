@@ -219,3 +219,7 @@ venv
 .DS_Store
 **/.DS_Store
 */.DS_Store
+
+docker-compose.yml
+.editorconfig
+.vscode
