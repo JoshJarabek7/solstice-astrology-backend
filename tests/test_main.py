@@ -112,7 +112,7 @@ async def test_get_post(client: httpx.AsyncClient, user_1: TestUser, post_1: Tes
     assert data["post_id"] == post_1.post_id
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_create_and_like_post(client: httpx.AsyncClient, user_1: TestUser):
     # Create a post
     response = await client.post(
@@ -137,7 +137,7 @@ async def test_create_and_like_post(client: httpx.AsyncClient, user_1: TestUser)
     data = response.json()
     assert data["successful"] is True
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 async def test_delete_post(client: httpx.AsyncClient, user_1: TestUser):
     # Create a post specifically for deletion
     response = await client.post(

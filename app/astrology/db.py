@@ -3,14 +3,17 @@ from datetime import datetime
 
 from fastapi import HTTPException
 
-from app.astrology.schemas import (AstrologyDetailsCompared,
-                                   AstrologyDetailsSingleUser)
-from app.astrology.utils import (assign_signs_to_bodies,
-                                 calculate_body_positions, calculate_houses,
-                                 calculate_julian_day,
-                                 get_astrology_details_for_body_single_user,
-                                 get_astrology_details_for_comparison,
-                                 get_sign_for_position, local_to_utc)
+from app.astrology.schemas import AstrologyDetailsCompared, AstrologyDetailsSingleUser
+from app.astrology.utils import (
+    assign_signs_to_bodies,
+    calculate_body_positions,
+    calculate_houses,
+    calculate_julian_day,
+    get_astrology_details_for_body_single_user,
+    get_astrology_details_for_comparison,
+    get_sign_for_position,
+    local_to_utc,
+)
 from app.shared.neo4j import driver
 
 

@@ -5,13 +5,23 @@ from uuid import uuid4
 from fastapi import HTTPException, status
 from loguru import logger
 
-from app.posts.schemas import (BookmarkGroupResponse, BookmarkGroupsResponse,
-                               BookmarkResponse, BookmarksResponse,
-                               CreateBookmarkGroupRequest, CreatePostRequest,
-                               PostLikesResponse, PostRepliesResponse,
-                               PostReplyResponse, PostResponse, PostsResponse,
-                               QuoterResponse, QuotersResponse,
-                               RepostersResponse, UpdateBookmarkGroupRequest)
+from app.posts.schemas import (
+    BookmarkGroupResponse,
+    BookmarkGroupsResponse,
+    BookmarkResponse,
+    BookmarksResponse,
+    CreateBookmarkGroupRequest,
+    CreatePostRequest,
+    PostLikesResponse,
+    PostRepliesResponse,
+    PostReplyResponse,
+    PostResponse,
+    PostsResponse,
+    QuoterResponse,
+    QuotersResponse,
+    RepostersResponse,
+    UpdateBookmarkGroupRequest,
+)
 from app.shared.neo4j import driver
 from app.users.schemas import SimpleUserResponse
 
@@ -127,7 +137,7 @@ async def get_general_feed(user_id: str, exclude_post_ids: list[str], limit: int
                 "user_id": user_id,
                 "exclude_post_ids": exclude_post_ids,
                 "limit": limit,
-            }
+            },
         )
         response_data = await result.data()
         if not response_data:
@@ -210,7 +220,7 @@ async def create_general_post(user_id: str, request: CreatePostRequest) -> PostR
                 "video_length": post_data["video_length"],
                 "mentions": post_data["mentions"],
                 "hashtags": post_data["hashtags"],
-            }
+            },
         )
         if request.quoted_post_id:
             query = """
@@ -439,7 +449,7 @@ async def delete_post(post_id: str, user_id: str) -> None:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Post not found or you don't have permission to delete it.",
             )
-        return None
+        return
 
 async def get_likes_for_post(post_id: str, user_id: str, cursor: datetime | None = None, limit: int = 10) -> PostLikesResponse:
     cursor = cursor or datetime.now(UTC)
@@ -566,12 +576,12 @@ async def repost(post_id: str, user_id: str) -> None:
                 "post_id": post_id,
                 "requester_id": user_id,
                 "created_at": datetime.now(UTC).isoformat(),
-            }
+            },
         )
         record = await result.single()
         if not record:
             raise HTTPException(status_code=500, detail="Failed to repost post.")
-        return None
+        return
 
 async def unrepost(post_id: str, user_id: str) -> None:
     query = """
@@ -588,12 +598,12 @@ async def unrepost(post_id: str, user_id: str) -> None:
             {
                 "post_id": post_id,
                 "requester_id": user_id,
-            }
+            },
         )
         record = await result.single()
         if not record:
             raise HTTPException(status_code=500, detail="Post not found or you haven't reposted this post.")
-        return None
+        return
 
 async def get_quoters(post_id: str, user_id: str, cursor: datetime | None = None, limit: int = 10) -> QuotersResponse:
     cursor = cursor or datetime.now(UTC)
@@ -658,7 +668,7 @@ async def get_quoters(post_id: str, user_id: str, cursor: datetime | None = None
             QuoterResponse(
                 quoter=SimpleUserResponse(**record["quote_data"]["quoter"]),
                 post=PostResponse(**record["quote_data"]["post"]),
-                created_at=datetime.fromisoformat(record["quote_data"]["created_at"])
+                created_at=datetime.fromisoformat(record["quote_data"]["created_at"]),
             )
             for record in records
         ]
@@ -721,7 +731,7 @@ async def get_post_replies(post_id: str, user_id: str, cursor: datetime | None =
             PostReplyResponse(
                 post=PostResponse(**record["reply_data"]["reply"]),
                 replier=SimpleUserResponse(**record["reply_data"]["replier"]),
-                created_at=datetime.fromisoformat(record["reply_data"]["created_at"])
+                created_at=datetime.fromisoformat(record["reply_data"]["created_at"]),
             )
             for record in records
         ]
@@ -974,7 +984,7 @@ async def get_bookmark_group(user_id: str, bookmark_group_id: str, cursor: datet
             bookmarks.append(BookmarkResponse(
                 bookmark_id=bookmark_data["bookmark"]["bookmark_id"],
                 post=post,
-                created_at=datetime.fromisoformat(bookmark_data["bookmark"]["created_at"])
+                created_at=datetime.fromisoformat(bookmark_data["bookmark"]["created_at"]),
             ))
 
         next_cursor = bookmarks[-1].created_at if bookmarks else None
@@ -982,7 +992,7 @@ async def get_bookmark_group(user_id: str, bookmark_group_id: str, cursor: datet
         return BookmarksResponse(
             bookmarks=bookmarks,
             has_more=len(bookmarks) == limit,
-            next_cursor=next_cursor
+            next_cursor=next_cursor,
         )
 
 async def update_bookmark_group(user_id: str, bookmark_group_id: str, request: UpdateBookmarkGroupRequest) -> bool:

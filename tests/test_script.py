@@ -1,12 +1,10 @@
 import asyncio
-import json
 import sys
 
 from dotenv import load_dotenv
 from loguru import logger
 
-from app.users.db import (check_username_availability, create_dev_user_db,
-                          delete_user_db, get_user_profile, update_user_db)
+from app.users.db import check_username_availability, create_dev_user_db, delete_user_db, get_user_profile, update_user_db
 from app.users.schemas import UpdateUserRequest, UserProfileResponse
 
 load_dotenv()
@@ -18,10 +16,8 @@ TEST_USER_1_APPLE_ID="8e33e696-58f6-4937-b77a-e75eb31260b2"
 TEST_USER_2_ID="73730b0d-7699-4550-81cc-d50d76c9dc3e"
 TEST_USER_2_APPLE_ID="d3730646-407e-4a7e-9b87-dc28ef24957b"
 async def main():
+    """Create our users first
     """
-    Create our users first
-    """
-
     # Create users
     user_one = await create_dev_user_db(TEST_USER_1_ID, TEST_USER_1_APPLE_ID, "test@example.com", "Test", "User")
     user_two = await create_dev_user_db(TEST_USER_2_ID, TEST_USER_2_APPLE_ID, "test@example.com", "Test", "User")
@@ -69,7 +65,7 @@ async def main():
     logger.info(f"User three deleted successfully: {user3_exists is None}")
 
     # User one should follow user two
-    
+
 
     """
     Create our posts

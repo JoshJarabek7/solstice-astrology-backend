@@ -109,36 +109,21 @@ TODO: Change organizations to groups.
     - Whether or not it's affiliated with a school
 """
 
-import asyncio
 import json
 import os
-import re
 import sys
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from enum import IntEnum
 from math import atan2, cos, radians, sin, sqrt
 from pathlib import Path
-from typing import Any, LiteralString, Optional, TypeVar, cast
+from typing import LiteralString, cast
 from uuid import UUID, uuid4
 
-import httpx
-import jwt
-import neo4j
-import pytz
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import rsa
 from dotenv import load_dotenv
-from fastapi import (Depends, FastAPI, HTTPException, Query, Security,
-                     WebSocket, WebSocketException, status)
-from fastapi.security import OAuth2PasswordBearer
+from fastapi import Depends, FastAPI, HTTPException, Query, WebSocket, WebSocketException, status
 from faststream.kafka.fastapi import KafkaRouter
-from jwt.algorithms import RSAAlgorithm
 from loguru import logger
-from neo4j import AsyncGraphDatabase
-from neo4j.exceptions import Neo4jError
-from openai import AsyncAzureOpenAI
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 
 logger.add(sys.stderr, format="{time:YYYY-MM-DD at HH:mm:ss} | {level} | {message}", level="DEBUG")
 load_dotenv()

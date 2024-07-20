@@ -14,9 +14,7 @@ from loguru import logger
 
 from app.shared.apple_key_cache import key_cache
 from app.shared.settings import pem_public_key, settings_model
-from app.users.schemas import (AppleTokenRequest, AppleTokenResponse,
-                               RefreshTokenRequest, TokenResponse,
-                               VerifiedUser)
+from app.users.schemas import AppleTokenRequest, AppleTokenResponse, RefreshTokenRequest, TokenResponse, VerifiedUser
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 algorithm = "ES256"
@@ -79,7 +77,7 @@ async def generate_client_secret(user_id: str) -> str:
     return jwt.encode(
         payload,
         str(settings_model.jwt.private_key),
-        algorithm=str("ES256"),
+        algorithm="ES256",
         headers=headers,
     )
 

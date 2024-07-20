@@ -26,7 +26,7 @@ class WebSocketManager:
 
     async def ensure_conversations(self, conversation_id: str) -> None:
         if conversation_id in self.active_conversations:
-            return None
+            return
         query = """
         MATCH (c:Conversation {conversation_id: $conversation_id})
         MATCH (u:User)-[:PARTICIPATES_IN]->(c)
@@ -37,7 +37,7 @@ class WebSocketManager:
                 query,
                 {
                     "conversation_id": conversation_id,
-                }
+                },
             )
             record = await result.single()
             if record:
@@ -45,7 +45,7 @@ class WebSocketManager:
             else:
                 logger.error(f"Failed to find conversation {conversation_id}")
                 raise HTTPException(status_code=404, detail="Conversation not found")
-        return None
+        return
 
 
     async def user_joined_conversation(self, conversation_id: str, user_id: str) -> None:
@@ -58,13 +58,14 @@ class WebSocketManager:
         Args:
             conversation_id (str): The ID of the conversation.
             user_id (str): The ID of the user.
+
         Returns:
             None
         """
         if conversation_id not in self.active_conversations:
-            return None
+            return
         self.active_conversations[conversation_id].add(user_id)
-        return None
+        return
 
     async def user_left_conversation(self, conversation_id: str, user_id: str) -> None:
         """Removes a user from a conversation.
@@ -75,13 +76,14 @@ class WebSocketManager:
         Args:
             conversation_id (str): The ID of the conversation.
             user_id (str): The ID of the user.
+
         Returns:
             None
         """
         if conversation_id not in self.active_conversations:
-            return None
+            return
         self.active_conversations[conversation_id].remove(user_id)
-        return None
+        return
 
 
     async def connect(self, websocket: WebSocket, user_id: str) -> str:
@@ -128,13 +130,14 @@ class WebSocketManager:
             conversation_id (str): The ID of the conversation.
             user_id (str | None): The ID of the user.
             socket_id (str | None): The socket ID.
+
         Returns:
             None
         """
         if conversation_id not in self.active_connections:
-            return None
+            return
         if user_id not in self.active_connections[conversation_id]:
-            return None
+            return
         for users in self.active_connections[conversation_id].values():
             for sid, websocket in users.items():
                 if not socket_id or sid != socket_id:
@@ -152,4 +155,3 @@ class WebSocketManager:
             for sock in self.active_connections[user_id].values():
                 if sock == socket_id:
                     await sock.send_json(data, mode="json")
-        return None

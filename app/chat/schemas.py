@@ -8,8 +8,8 @@ from app.users.schemas import SimpleUserResponse
 
 class PostPreview(BaseModel):
     post_id: str
-    content_preview: Optional[str]
-    user: Optional[SimpleUserResponse]
+    content_preview: str | None
+    user: SimpleUserResponse | None
     created_at: datetime
     is_accessible: bool
 
@@ -18,7 +18,7 @@ class MessageReaction(BaseModel):
     reactor_id: str
 
 class MediaAttachment(BaseModel):
-    type: Literal['image', 'video']
+    type: Literal["image", "video"]
     url: str
 
 class ConversationMessage(BaseModel):
@@ -26,9 +26,9 @@ class ConversationMessage(BaseModel):
     content: str
     created_at: datetime
     sender: SimpleUserResponse
-    attached_post: Optional[PostPreview] = None
-    attached_media: Optional[MediaAttachment] = None
-    reply_to: Optional['ConversationMessage'] = None
+    attached_post: PostPreview | None = None
+    attached_media: MediaAttachment | None = None
+    reply_to: Optional["ConversationMessage"] = None
     reactions: list[MessageReaction] = []
 
 ConversationMessage.model_rebuild()
@@ -49,9 +49,9 @@ class ConversationMessageEvent(BaseModel):
     content: str
     created_at: datetime
     sender_id: str
-    attached_post: Optional[PostPreview]
-    attached_media: Optional[MediaAttachment]
-    reply_to: Optional[ConversationMessage]
+    attached_post: PostPreview | None
+    attached_media: MediaAttachment | None
+    reply_to: ConversationMessage | None
     reactions: list[MessageReaction]
 
 class CreateGroupChatRequest(BaseModel):

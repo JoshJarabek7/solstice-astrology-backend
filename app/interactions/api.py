@@ -2,7 +2,7 @@ import json
 from datetime import UTC, datetime
 from uuid import uuid4
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException
 from faststream.kafka.fastapi import KafkaRouter
 from loguru import logger
 
@@ -62,12 +62,11 @@ async def viewed_profile_event(event: ViewedProfileEvent) -> None:
         if record:
             logger.info(f"Profile view recorded. View ID: {record['view_id']}, "
                         f"Total views: {record['total_views']}, "
-                        f"Views in last 30 days: {record['recent_views']}"
+                        f"Views in last 30 days: {record['recent_views']}",
             )
         else:
             logger.error("Failed to record profile view.")
 
-    return None
 
 
 @router.subscriber("viewed.post")
@@ -121,7 +120,6 @@ async def viewed_post_event(event: ViewedPostEvent) -> None:
         else:
             logger.error("Failed to record post view.")
 
-    return None
 
 @router.subscriber("liked.post")
 async def like_post_event(event: LikedPostEvent) -> None:
@@ -141,12 +139,12 @@ async def like_post_event(event: LikedPostEvent) -> None:
                 "post_id": event.post_id,
                 "requester_id": event.user_id,
                 "created_at": datetime.now(UTC).isoformat(),
-            }
+            },
         )
         record = await result.single()
         if not record:
             raise HTTPException(status_code=500, detail="Failed to like post.")
-        return None
+        return
 
 @router.subscriber("unliked.post")
 async def unlike_post_event(event: UnlikedPostEvent) -> None:
@@ -166,7 +164,7 @@ async def unlike_post_event(event: UnlikedPostEvent) -> None:
             {
                 "post_id": event.post_id,
                 "requester_id": event.user_id,
-            }
+            },
         )
         record = await result.single()
         if not record:
@@ -176,7 +174,7 @@ async def unlike_post_event(event: UnlikedPostEvent) -> None:
         logger.success(f"""
         Unliked post {event.post_id} for user {event.user_id}.
         """)
-        return None
+        return
 
 
 @router.subscriber("added.bookmark")
@@ -276,12 +274,12 @@ async def swiped_right_event(event: SwipeRightEvent) -> None:
                 "requesting_user_id": event.requesting_user_id,
                 "target_user_id": event.target_user_id,
                 "created_at": datetime.now(UTC).isoformat(),
-            }
+            },
         )
         record = await result.single()
         if not record:
             logger.error(f"Failed to swipe right for user {event.target_user_id} for user {event.requesting_user_id}.")
-            return None
+            return
         logger.success(f"Swiped right for user {event.target_user_id} for user {event.requesting_user_id}.")
         if record["swiped_right_count"] > 1:
             await router.broker.publish(
@@ -289,11 +287,11 @@ async def swiped_right_event(event: SwipeRightEvent) -> None:
                 message={
                     "user_one": event.target_user_id,
                     "user_two": event.requesting_user_id,
-                }
+                },
 
             )
 
-        return None
+        return
 
 @router.subscriber("dating.match", group_id="create-db-dating-matches")
 async def match_event(event: MatchEvent) -> None:
@@ -326,7 +324,7 @@ async def match_event(event: MatchEvent) -> None:
                 "user_two": event.user_two,
                 "created_at": datetime.now(UTC).isoformat(),
                 "updated_at": datetime.now(UTC).isoformat(),
-            }
+            },
         )
         record = await result.single()
         if not record:
@@ -343,7 +341,7 @@ async def match_event(event: MatchEvent) -> None:
                 "profile_photo": record["user_two"]["profile_photo"],
                 "first_name": record["user_two"]["first_name"],
                 "last_name": record["user_two"]["last_name"][0].upper() + "." if record["user_two"]["last_name"] else "",
-            }
+            },
         }
         user_two_response = {
             "message_type": "alert-dating-match",
@@ -355,7 +353,7 @@ async def match_event(event: MatchEvent) -> None:
                 "profile_photo": record["user_one"]["profile_photo"] if record["user_one"]["profile_photo"] else "",
                 "first_name": record["user_one"]["first_name"] if record["user_one"]["first_name"] else "",
                 "last_name": record["user_one"]["last_name"][0].upper() + "." if record["user_one"]["last_name"] else "",
-            }
+            },
         }
 
         ws_manager = WebSocketManager()
@@ -373,7 +371,7 @@ async def viewed_profile_route(event: ViewedProfileRequest, verified_user: Verif
         message={
             "viewing_user_id": verified_user.user_id,
             "viewed_user_id": event.viewed_user_id,
-        }
+        },
     )
 
 @router.post("/api/post/viewed")
@@ -384,7 +382,7 @@ async def viewed_post_route(event: ViewedPostRequest, verified_user: VerifiedUse
         message={
             "viewing_user_id": verified_user.user_id,
             "viewed_post_id": event.viewed_post_id,
-        }
+        },
     )
 
 @router.post("/api/post/like/{post_id}", response_model=None)
@@ -397,7 +395,7 @@ async def like_post_route(
         message={
             "post_id": post_id,
             "user_id": verified_user.user_id,
-        }
+        },
     )
 
 @router.post("/api/post/repost/{post_id}", response_model=None)
@@ -410,7 +408,7 @@ async def repost_route(
         message={
             "post_id": post_id,
             "user_id": verified_user.user_id,
-        }
+        },
     )
 
 @router.delete("/api/post/repost/{post_id}", response_model=None)
@@ -423,7 +421,7 @@ async def unrepost_route(
         message={
             "post_id": post_id,
             "user_id": verified_user.user_id,
-        }
+        },
     )
 
 @router.post("/api/bookmark", response_model=None)
@@ -434,7 +432,7 @@ async def add_bookmark_route(bookmark_request: AddBookmarkRequest, verified_user
             "bookmark_group_id": bookmark_request.bookmark_group_id,
             "post_id": bookmark_request.post_id,
             "user_id": verified_user.user_id,
-        }
+        },
     )
 
 @router.delete("/api/bookmark/{bookmark_id}", response_model=None)
@@ -444,5 +442,5 @@ async def delete_bookmark_route(bookmark_id: str, verified_user: VerifiedUser = 
         message={
             "bookmark_id": bookmark_id,
             "user_id": verified_user.user_id,
-        }
+        },
     )

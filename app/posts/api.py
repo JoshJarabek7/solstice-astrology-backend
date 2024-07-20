@@ -3,18 +3,35 @@ from datetime import datetime
 from fastapi import Depends, Query
 from faststream.kafka.fastapi import KafkaRouter
 
-from app.posts.db import (bookmark_group_exists_for_user,
-                          create_bookmark_group, create_general_post,
-                          delete_bookmark_group, delete_post,
-                          get_bookmark_groups, get_general_feed,
-                          get_likes_for_post, get_post, get_post_replies,
-                          get_quoters, get_reposters, update_bookmark_group)
-from app.posts.schemas import (BookmarkGroupsResponse,
-                               CreateBookmarkGroupRequest, CreatePostRequest,
-                               GetBookmarkGroupRequest, PostFeedRequest,
-                               PostLikesResponse, PostRepliesResponse,
-                               PostResponse, PostsResponse, QuotersResponse,
-                               RepostersResponse, UpdateBookmarkGroupRequest)
+from app.posts.db import (
+    bookmark_group_exists_for_user,
+    create_bookmark_group,
+    create_general_post,
+    delete_bookmark_group,
+    delete_post,
+    get_bookmark_groups,
+    get_general_feed,
+    get_likes_for_post,
+    get_post,
+    get_post_replies,
+    get_quoters,
+    get_reposters,
+    update_bookmark_group,
+)
+from app.posts.schemas import (
+    BookmarkGroupsResponse,
+    CreateBookmarkGroupRequest,
+    CreatePostRequest,
+    GetBookmarkGroupRequest,
+    PostFeedRequest,
+    PostLikesResponse,
+    PostRepliesResponse,
+    PostResponse,
+    PostsResponse,
+    QuotersResponse,
+    RepostersResponse,
+    UpdateBookmarkGroupRequest,
+)
 from app.shared.auth import get_current_user
 from app.users.schemas import VerifiedUser
 

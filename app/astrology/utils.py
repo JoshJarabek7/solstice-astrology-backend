@@ -1,12 +1,27 @@
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import cast
 
 import pytz
 from loguru import logger
-from swisseph import (FLG_SPEED, FLG_SWIEPH, GREG_CAL, JUPITER, MARS, MERCURY,
-                      MOON, NEPTUNE, PLUTO, SATURN, SUN, URANUS, VENUS, calc,
-                      houses, julday)
+from swisseph import (
+    FLG_SPEED,
+    FLG_SWIEPH,
+    GREG_CAL,
+    JUPITER,
+    MARS,
+    MERCURY,
+    MOON,
+    NEPTUNE,
+    PLUTO,
+    SATURN,
+    SUN,
+    URANUS,
+    VENUS,
+    calc,
+    houses,
+    julday,
+)
 from timezonefinder import TimezoneFinder
 
 from app.astrology.data import astrology_data

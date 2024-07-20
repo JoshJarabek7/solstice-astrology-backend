@@ -66,7 +66,7 @@ async def search_posts(user_id: str, search_query: SearchPostsRequest, exclude_p
             "apiType": "AZURE",
             "model": "text-embedding-3-large",
             "dimensions": 256,
-            "encoding_format": "float"
+            "encoding_format": "float",
         })
     else:
         base_query += """
@@ -247,7 +247,7 @@ async def search_users(user_id: str, search_query: str, exclude_user_ids: list[s
         "apiType": "AZURE",
         "model": "text-embedding-3-large",
         "dimensions": 256,
-        "encoding_format": "float"
+        "encoding_format": "float",
     }
 
     async with driver.session() as session:

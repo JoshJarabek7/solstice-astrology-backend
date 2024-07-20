@@ -1,16 +1,20 @@
 from datetime import UTC, datetime
-from typing import Optional
 from uuid import uuid4
 
-from app.chat.schemas import (ConversationMessage, CreateDatingChatRequest,
-                              CreateGroupChatRequest, CreatePrivateChatRequest,
-                              InitialMessage, MediaAttachment, MessageReaction,
-                              PostPreview)
+from app.chat.schemas import (
+    ConversationMessage,
+    CreateDatingChatRequest,
+    CreateGroupChatRequest,
+    CreatePrivateChatRequest,
+    MediaAttachment,
+    MessageReaction,
+    PostPreview,
+)
 from app.shared.neo4j import driver
 from app.users.schemas import SimpleUserResponse
 
 
-async def get_conversation_messages(conversation_id: str, user_id: str, cursor: Optional[str] = None, limit: int = 20):
+async def get_conversation_messages(conversation_id: str, user_id: str, cursor: str | None = None, limit: int = 20):
     query = """
     MATCH (u:User {user_id: $user_id})-[:PARTICIPATES_IN]->(c:Conversation {conversation_id: $conversation_id})
     MATCH (m:Message)-[:IN]->(c)
@@ -69,7 +73,7 @@ async def get_conversation_messages(conversation_id: str, user_id: str, cursor: 
         "user_id": user_id,
         "conversation_id": conversation_id,
         "cursor": cursor or datetime.now().isoformat(),
-        "limit": limit + 1  # Fetch one extra to check if there are more messages
+        "limit": limit + 1,  # Fetch one extra to check if there are more messages
     }
 
     async with driver.session() as session:
@@ -79,44 +83,44 @@ async def get_conversation_messages(conversation_id: str, user_id: str, cursor: 
     messages: list[ConversationMessage] = []
     for record in records:
         attached_post = None
-        if record['attached_post']:
+        if record["attached_post"]:
             attached_post = PostPreview(
-                post_id=record['attached_post']['post_id'],
-                content_preview=record['attached_post']['content_preview'],
-                user=SimpleUserResponse(**record['attached_post']['user']) if record['attached_post']['user'] else None,
-                created_at=record['attached_post']['created_at'],
-                is_accessible=record['attached_post']['is_accessible']
+                post_id=record["attached_post"]["post_id"],
+                content_preview=record["attached_post"]["content_preview"],
+                user=SimpleUserResponse(**record["attached_post"]["user"]) if record["attached_post"]["user"] else None,
+                created_at=record["attached_post"]["created_at"],
+                is_accessible=record["attached_post"]["is_accessible"],
             )
 
         attached_media = None
-        if record['media_attachment_type'] and record['attached_media_url']:
+        if record["media_attachment_type"] and record["attached_media_url"]:
             attached_media = MediaAttachment(
-                type=record['media_attachment_type'],
-                url=record['attached_media_url']
+                type=record["media_attachment_type"],
+                url=record["attached_media_url"],
             )
 
         reply_to = None
-        if record['reply_to']:
+        if record["reply_to"]:
             reply_to = ConversationMessage(
-                message_id=record['reply_to']['message_id'],
-                content=record['reply_to']['content'],
-                created_at=record['reply_to']['created_at'],
-                sender=SimpleUserResponse(**record['reply_to']['sender']),
+                message_id=record["reply_to"]["message_id"],
+                content=record["reply_to"]["content"],
+                created_at=record["reply_to"]["created_at"],
+                sender=SimpleUserResponse(**record["reply_to"]["sender"]),
                 attached_post=None,
                 attached_media=None,
                 reply_to=None,
-                reactions=[]
+                reactions=[],
             )
 
         message: ConversationMessage = ConversationMessage(
-            message_id=record['message_id'],
-            content=record['content'],
-            created_at=record['created_at'],
-            sender=SimpleUserResponse(**record['sender']),
+            message_id=record["message_id"],
+            content=record["content"],
+            created_at=record["created_at"],
+            sender=SimpleUserResponse(**record["sender"]),
             attached_post=attached_post,
             attached_media=attached_media,
             reply_to=reply_to,
-            reactions=[MessageReaction(**r) for r in record['reactions']]
+            reactions=[MessageReaction(**r) for r in record["reactions"]],
         )
         messages.append(message)
 
@@ -127,7 +131,7 @@ async def get_conversation_messages(conversation_id: str, user_id: str, cursor: 
     return {
         "messages": messages,
         "has_more": has_more,
-        "next_cursor": messages[-1].created_at.isoformat() if has_more else None
+        "next_cursor": messages[-1].created_at.isoformat() if has_more else None,
     }
 
 async def create_group_chat(request: CreateGroupChatRequest, sender_id: str):
@@ -190,7 +194,7 @@ async def create_group_chat(request: CreateGroupChatRequest, sender_id: str):
         "initial_message": request.initial_message.model_dump(),
         "conversation_id": str(uuid4()),
         "message_id": str(uuid4()),
-        "created_at": datetime.now(UTC).isoformat()
+        "created_at": datetime.now(UTC).isoformat(),
     }
 
     async with driver.session() as session:
@@ -200,7 +204,7 @@ async def create_group_chat(request: CreateGroupChatRequest, sender_id: str):
     if record:
         return {
             "conversation_id": record["conversation_id"],
-            "message_id": record["message_id"]
+            "message_id": record["message_id"],
         }
     else:
         raise ValueError("Failed to create group chat. Ensure there are at least 3 participants and no blocking relationships.")
@@ -269,7 +273,7 @@ async def create_private_chat(request: CreatePrivateChatRequest, sender_id: str)
         "initial_message": request.initial_message.model_dump(),
         "conversation_id": str(uuid4()),
         "message_id": str(uuid4()),
-        "created_at": datetime.now(UTC).isoformat()
+        "created_at": datetime.now(UTC).isoformat(),
     }
 
     async with driver.session() as session:
@@ -279,7 +283,7 @@ async def create_private_chat(request: CreatePrivateChatRequest, sender_id: str)
     if record:
         return {
             "conversation_id": record["conversation_id"],
-            "message_id": record["message_id"]
+            "message_id": record["message_id"],
         }
     else:
         raise ValueError("Failed to create private chat. Ensure there are exactly 2 participants and no blocking relationships.")
@@ -349,7 +353,7 @@ async def create_dating_chat(request: CreateDatingChatRequest, sender_id: str):
         "initial_message": request.initial_message.model_dump(),
         "conversation_id": str(uuid4()),
         "message_id": str(uuid4()),
-        "created_at": datetime.now(UTC).isoformat()
+        "created_at": datetime.now(UTC).isoformat(),
     }
 
     async with driver.session() as session:
@@ -359,7 +363,7 @@ async def create_dating_chat(request: CreateDatingChatRequest, sender_id: str):
     if record:
         return {
             "conversation_id": record["conversation_id"],
-            "message_id": record["message_id"]
+            "message_id": record["message_id"],
         }
     else:
         raise ValueError("Failed to create dating chat. Ensure there are exactly 2 participants and no blocking relationships.")

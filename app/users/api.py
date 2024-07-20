@@ -3,26 +3,46 @@ from datetime import datetime
 from fastapi import Depends, HTTPException, Query, status
 from faststream.kafka.fastapi import KafkaRouter
 
-from app.shared.auth import (VerifiedUser, get_current_user, oauth2_scheme,
-                             refresh_user)
+from app.shared.auth import VerifiedUser, get_current_user, oauth2_scheme, refresh_user
 from app.shared.schemas import WasSuccessfulResponse
-from app.users.db import (block_user, check_username_availability,
-                          create_user_db, delete_follow_request,
-                          delete_user_db, get_block_list,
-                          get_follow_recommendations, get_follow_requests,
-                          get_followers, get_following, get_muted_users,
-                          get_user_profile, mute_user, send_follow_request,
-                          unblock_user, unfollow_user, unmute_user,
-                          update_user_db)
-from app.users.schemas import (BasicUserResponse, BlockedUsersResponse,
-                               BlockUserRequest, CreateUserResponse,
-                               FollowingResponse, FollowRequestResponse,
-                               GetFollowersResponse,
-                               GetFollowRecommendationsResponse,
-                               MutedUsersResponse, MuteUserRequest,
-                               RefreshTokenRequest, SendFollowReqRequest,
-                               TokenResponse, UpdateUserRequest,
-                               UsernameCheckResponse, UserProfileResponse)
+from app.users.db import (
+    block_user,
+    check_username_availability,
+    create_user_db,
+    delete_follow_request,
+    delete_user_db,
+    get_block_list,
+    get_follow_recommendations,
+    get_follow_requests,
+    get_followers,
+    get_following,
+    get_muted_users,
+    get_user_profile,
+    mute_user,
+    send_follow_request,
+    unblock_user,
+    unfollow_user,
+    unmute_user,
+    update_user_db,
+)
+from app.users.schemas import (
+    BasicUserResponse,
+    BlockedUsersResponse,
+    BlockUserRequest,
+    CreateUserResponse,
+    FollowingResponse,
+    FollowRequestResponse,
+    GetFollowersResponse,
+    GetFollowRecommendationsResponse,
+    MutedUsersResponse,
+    MuteUserRequest,
+    RefreshTokenRequest,
+    SendFollowReqRequest,
+    TokenResponse,
+    UpdateUserRequest,
+    UsernameCheckResponse,
+    UserProfileResponse,
+)
 
 router = KafkaRouter()
 
@@ -46,9 +66,11 @@ async def update_user_route(
     verified_user: VerifiedUser = Depends(get_current_user),
 ) -> BasicUserResponse:
     """Updates user information.
+
     Args:
         user_updates (UpdateUserRequest): The request body containing user updates.
         verified_user (VerifiedUser): The verified user making the request.
+
     Returns:
         BasicUserResponse: The updated user information.
     """
@@ -59,10 +81,13 @@ async def delete_user_route(
     verified_user: VerifiedUser = Depends(get_current_user),
 ) -> None:
     """Delete the authenticated user's account.
+
     Args:
         verified_user (VerifiedUser): The verified user making the request.
+
     Raises:
         HTTPException: If the user is not found or deletion fails.
+
     Returns:
         None: None
     """
@@ -73,8 +98,10 @@ async def check_username_route(
     username: str,
 ) -> UsernameCheckResponse:
     """Check if a username is available.
+
     Args:
         username (str): The username to check.
+
     Returns:
         UsernameCheckResponse: The response containing the availability status.
     """
@@ -90,11 +117,13 @@ async def get_user_route(
     verified_user: VerifiedUser = Depends(get_current_user),
 ) -> UserProfileResponse | None:
     """Get a user's profile.
+
     Args:
         target_user_id (str): The ID of the user to get the profile for.
         cursor (datetime, optional): The cursor for pagination. Defaults to None.
         limit (int): The number of follows to return. Defaults to 10.
         verified_user (VerifiedUser): The verified user making the request.
+
     Returns:
         UserProfileResponse | None: The user's profile or None if the user is not found.
     """
@@ -102,15 +131,17 @@ async def get_user_route(
         requesting_user_id = verified_user.user_id,
         target_user_id=target_user_id,
         cursor=cursor,
-        limit=limit
+        limit=limit,
         )
 
 
 @router.post("/api/user/refresh", response_model=TokenResponse)
 async def refresh_user_route(token_data: RefreshTokenRequest) -> TokenResponse:
     """Refresh the user's token.
+
     Args:
         token_data (RefreshTokenRequest): The request containing the refresh token.
+
     Returns:
         TokenResponse: The response containing the access token and refresh token.
     """
@@ -122,8 +153,10 @@ async def get_muted_users_route(
     verified_user: VerifiedUser = Depends(get_current_user),
 ) -> MutedUsersResponse:
     """Get a list of muted users.
+
     Args:
         verified_user (VerifiedUser): The verified user making the request.
+
     Returns:
         MutedUsersResponse: The list of muted users.
     """
@@ -135,9 +168,11 @@ async def mute_user_route(
     verified_user: VerifiedUser = Depends(get_current_user),
 ) -> WasSuccessfulResponse:
     """Mute a user.
+
     Args:
         request (MuteUserRequest): The request containing the user ID to mute.
         verified_user (VerifiedUser): The verified user making the request.
+
     Returns:
         WasSuccessfulResponse: The response indicating whether the user was muted.
     """

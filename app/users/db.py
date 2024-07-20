@@ -8,16 +8,22 @@ from loguru import logger
 from pydantic import EmailStr
 
 from app.posts.schemas import PostResponse
-from app.shared.auth import (create_dev_jwt, exchange_auth_code, oauth2_scheme,
-                             verify_id_token)
+from app.shared.auth import create_dev_jwt, exchange_auth_code, oauth2_scheme, verify_id_token
 from app.shared.neo4j import driver
 from app.shared.settings import settings_model
-from app.users.schemas import (BasicUserResponse, BlockedUsersResponse,
-                               CreateUserResponse, FollowingResponse,
-                               FollowRequestResponse, GetFollowersResponse,
-                               GetFollowRecommendationsResponse,
-                               MutedUsersResponse, SimpleUserResponse,
-                               UpdateUserRequest, UserProfileResponse)
+from app.users.schemas import (
+    BasicUserResponse,
+    BlockedUsersResponse,
+    CreateUserResponse,
+    FollowingResponse,
+    FollowRequestResponse,
+    GetFollowersResponse,
+    GetFollowRecommendationsResponse,
+    MutedUsersResponse,
+    SimpleUserResponse,
+    UpdateUserRequest,
+    UserProfileResponse,
+)
 
 
 async def get_user_profile(requesting_user_id: str, target_user_id: str, cursor: datetime | None = None, limit: int = 100) -> UserProfileResponse | None:
@@ -160,21 +166,21 @@ async def get_user_profile(requesting_user_id: str, target_user_id: str, cursor:
         posts: list[PostResponse] = []
         for post in posts_data[:limit]:
             post_data = {**post}
-            if post['quoted_post']:
-                post_data['quoted_post'] = PostResponse(
-                    **post['quoted_post'],
-                    poster=SimpleUserResponse(**post['quoted_post']['poster']),
+            if post["quoted_post"]:
+                post_data["quoted_post"] = PostResponse(
+                    **post["quoted_post"],
+                    poster=SimpleUserResponse(**post["quoted_post"]["poster"]),
                     quoted_post=None,
-                    replied_post=None
+                    replied_post=None,
                 )
-            if post['replied_post']:
-                post_data['replied_post'] = PostResponse(
-                    **post['replied_post'],
-                    poster=SimpleUserResponse(**post['replied_post']['poster']),
+            if post["replied_post"]:
+                post_data["replied_post"] = PostResponse(
+                    **post["replied_post"],
+                    poster=SimpleUserResponse(**post["replied_post"]["poster"]),
                     quoted_post=None,
-                    replied_post=None
+                    replied_post=None,
                 )
-            post_data['poster'] = SimpleUserResponse(**post['poster'])
+            post_data["poster"] = SimpleUserResponse(**post["poster"])
             posts.append(PostResponse(**post_data))
 
         has_more = len(posts_data) > limit

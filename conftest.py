@@ -7,7 +7,7 @@ from pytest_asyncio import is_async_test
 
 load_dotenv()
 
-@pytest.fixture
+@pytest.fixture()
 async def mock_neo4j_session(mocker: pytest_mock.MockerFixture):
     # Create an AsyncMock for the session
     session = AsyncMock()
@@ -19,7 +19,7 @@ async def mock_neo4j_session(mocker: pytest_mock.MockerFixture):
     session.__aexit__.return_value = None
 
     # Patch the driver.session method to return the mocked session
-    mocker.patch('app.shared.neo4j.driver.session', return_value=session)
+    mocker.patch("app.shared.neo4j.driver.session", return_value=session)
     return session
 
 def pytest_collection_modifyitems(items: list[pytest.Function]):
@@ -29,4 +29,4 @@ def pytest_collection_modifyitems(items: list[pytest.Function]):
 
 @pytest.fixture(autouse=True)
 def mock_driver(mocker: pytest_mock.MockerFixture):
-    mocker.patch('app.shared.neo4j.driver', new_callable=AsyncMock)
+    mocker.patch("app.shared.neo4j.driver", new_callable=AsyncMock)

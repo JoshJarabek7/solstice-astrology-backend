@@ -56,7 +56,7 @@ async def set_user_embedding():
         "apiType": "AZURE",
         "model": "text-embedding-ada-002",
         "dimensions": 256,
-        "encoding_format": "float"
+        "encoding_format": "float",
     })
     record = await res.single()
     if not record:
@@ -109,8 +109,8 @@ async def set_post_embedding():
                 "apiType": "AZURE",
                 "model": "text-embedding-3-large",
                 "dimensions": 256,
-                "encoding_format": "float"
-            }
+                "encoding_format": "float",
+            },
         )
         record = await res.single()
         if not record:

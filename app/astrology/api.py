@@ -2,11 +2,8 @@
 from fastapi import Depends
 from faststream.kafka.fastapi import KafkaRouter
 
-from app.astrology.db import (compare_astrology_couple, create_astrology_chart,
-                              get_astrology_profile)
-from app.astrology.schemas import (AstrologyChartCreationRequest,
-                                   AstrologyDetailsCompared,
-                                   AstrologyDetailsSingleUser)
+from app.astrology.db import compare_astrology_couple, create_astrology_chart, get_astrology_profile
+from app.astrology.schemas import AstrologyChartCreationRequest, AstrologyDetailsCompared, AstrologyDetailsSingleUser
 from app.shared.auth import get_current_user
 from app.users.schemas import VerifiedUser
 

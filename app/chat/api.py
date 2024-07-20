@@ -3,10 +3,8 @@ import json
 from fastapi import Depends
 from faststream.kafka.fastapi import KafkaRouter
 
-from app.chat.db import (create_dating_chat, create_group_chat,
-                         create_private_chat)
-from app.chat.schemas import (ChatCreatedEvent, CreateDatingChatRequest,
-                              CreateGroupChatRequest, CreatePrivateChatRequest)
+from app.chat.db import create_dating_chat, create_group_chat, create_private_chat
+from app.chat.schemas import ChatCreatedEvent, CreateDatingChatRequest, CreateGroupChatRequest, CreatePrivateChatRequest
 from app.notifications.ws import WebSocketManager
 from app.shared.auth import get_current_user
 from app.users.schemas import VerifiedUser
@@ -27,8 +25,8 @@ async def create_group_chat_route(request: CreateGroupChatRequest, verified_user
             message_id=message_id,
             conversation_type=request.conversation_type,
             participants=request.participants,
-            initial_message=request.initial_message
-        ).model_dump()
+            initial_message=request.initial_message,
+        ).model_dump(),
     )
     return {
         "conversation_id": conversation_id,
@@ -46,8 +44,8 @@ async def create_single_chat_route(request: CreatePrivateChatRequest, verified_u
             message_id=message_id,
             conversation_type=request.conversation_type,
             participants=request.participants,
-            initial_message=request.initial_message
-        ).model_dump()
+            initial_message=request.initial_message,
+        ).model_dump(),
     )
     return {
         "conversation_id": conversation_id,
@@ -65,8 +63,8 @@ async def create_dating_chat_route(request: CreateDatingChatRequest, verified_us
             message_id=message_id,
             conversation_type=request.conversation_type,
             participants=request.participants,
-            initial_message=request.initial_message
-        ).model_dump()
+            initial_message=request.initial_message,
+        ).model_dump(),
     )
     return {
         "conversation_id": conversation_id,
@@ -78,7 +76,7 @@ async def alert_chat_group_created(event: ChatCreatedEvent) -> None:
     await ws_manager.ensure_conversations(event.conversation_id)
     data = {
         "message_type": "alert-chat-group-created",
-        "data": event.model_dump()
+        "data": event.model_dump(),
     }
     await ws_manager.send_message(json.dumps(data), event.conversation_id, user_id=None, socket_id=None)
 
@@ -88,7 +86,7 @@ async def alert_chat_private_created(event: ChatCreatedEvent) -> None:
     await ws_manager.ensure_conversations(event.conversation_id)
     data = {
         "message_type": "alert-chat-private-created",
-        "data": event.model_dump()
+        "data": event.model_dump(),
     }
     await ws_manager.send_message(json.dumps(data), event.conversation_id, user_id=None, socket_id=None)
 
@@ -98,6 +96,6 @@ async def alert_chat_dating_created(event: ChatCreatedEvent) -> None:
     await ws_manager.ensure_conversations(event.conversation_id)
     data = {
         "message_type": "alert-chat-dating-created",
-        "data": event.model_dump()
+        "data": event.model_dump(),
     }
     await ws_manager.send_message(json.dumps(data), event.conversation_id, user_id=None, socket_id=None)
