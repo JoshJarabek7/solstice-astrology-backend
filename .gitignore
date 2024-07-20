@@ -223,3 +223,6 @@ venv
 docker-compose.yml
 .editorconfig
 .vscode
+
+private_key.pem
+**/*.pem

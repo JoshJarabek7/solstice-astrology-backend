@@ -33,6 +33,7 @@ pytest-asyncio = "^0.23.7"
 pytest-cov = "^5.0.0"
 ruff = "^0.5.1"
 datamodel-code-generator = "^0.25.8"
+pytest-mock = "^3.14.0"
 
 [tool.ruff]
 indent-width = 4
@@ -48,6 +49,10 @@ format.docstring-code-line-length = "dynamic"
 lint.isort.combine-as-imports = true
 lint.flake8-bugbear.extend-immutable-calls = ["fastapi.Depends", "fastapi.params.Depends", "fastapi.Query", "fastapi.params.Query"]
 line-length = 140
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
