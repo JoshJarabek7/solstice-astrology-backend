@@ -62,3 +62,8 @@ class SwipeRightEvent(BaseModel):
 class MatchEvent(BaseModel):
     user_one: str
     user_two: str
+
+"""---------------- MAJOR SECTIONS -----------------"""
+class ViewedMajorSectionEvent(BaseModel):
+    section: str
+    user_id: str

@@ -1,18 +1,97 @@
 from datetime import UTC, datetime
 from uuid import uuid4
 
-from app.chat.schemas import (
-    ConversationMessage,
-    CreateDatingChatRequest,
-    CreateGroupChatRequest,
-    CreatePrivateChatRequest,
-    MediaAttachment,
-    MessageReaction,
-    PostPreview,
-)
+from fastapi import HTTPException
+
+from app.chat.schemas import (ConversationMessage, ConversationMessageEvent,
+                              CreateDatingChatRequest, CreateGroupChatRequest,
+                              CreatePrivateChatRequest, MessageReaction,
+                              PostPreview)
 from app.shared.neo4j import driver
 from app.users.schemas import SimpleUserResponse
 
+
+async def get_attached_post(post_id: str, user_id: str) -> PostPreview | None:
+    query = """
+    MATCH (post:Post {post_id: $post_id})
+    OPTIONAL MATCH (post)<-[:POSTED]-(author:User)
+    OPTIONAL MATCH (user:User {user_id: $user_id})
+    WHERE NOT (author)-[:BLOCKS]-(user) AND (NOT author.account_private OR (user)-[:FOLLOWS]->(author))
+    RETURN post {
+        .post_id,
+        .content,
+        .created_at
+    } AS post,
+    author {
+        .user_id,
+        .username,
+        .display_name,
+        .profile_photo
+    } AS user,
+    CASE
+        WHEN author IS NULL THEN false
+        WHEN NOT (author)-[:BLOCKS]-(user) AND (NOT author.account_private OR (user)-[:FOLLOWS]->(author)) THEN true
+        ELSE false
+    END AS is_accessible
+    """
+
+    async with driver.session() as session:
+        result = await session.run(
+            query,
+            {
+                "post_id": post_id,
+                "user_id": user_id,
+            }
+        )
+        record = await result.single()
+
+        if record and record["post"]:
+            return PostPreview(
+                post_id=record["post"]["post_id"],
+                content_preview=record["post"]["content"][:100] if record["is_accessible"] else None,
+                user=SimpleUserResponse(**record["user"]) if record["user"] and record["is_accessible"] else None,
+                created_at=record["post"]["created_at"],
+                is_accessible=record["is_accessible"]
+            )
+        return None
+
+async def get_replied_to_message(message_id: str, user_id: str) -> ConversationMessage | None:
+    query = """
+    MATCH (u:User {user_id: $user_id})-[:PARTICIPATES_IN]->(c:Conversation)-[:REPLIED_TO]->(m:Message {message_id: $message_id})
+    MATCH (m)-[:IN]->(c)
+    MATCH (sender:User)-[:SENT]->(m)
+    RETURN m {
+        .message_id,
+        .content,
+        .created_at,
+        sender {
+            .user_id,
+            .username,
+            .display_name,
+            .profile_photo
+        }
+    """
+    async with driver.session() as session:
+        result = await session.run(
+            query,
+            {
+                "user_id": user_id,
+                "message_id": message_id,
+            },
+        )
+        record = await result.single()
+        if not record:
+            raise HTTPException(status_code=404, detail="Message not found.")
+        return ConversationMessage(
+            message_id=record["message_id"],
+            content=record["content"],
+            created_at=datetime.fromisoformat(record["created_at"]),
+            sender=SimpleUserResponse(**record["sender"]),
+            attached_post=None,
+            attached_media_urls=None,
+            reply_to=None,
+            reactions=[],
+        )
 
 async def get_conversation_messages(conversation_id: str, user_id: str, cursor: str | None = None, limit: int = 20):
     query = """
@@ -92,12 +171,9 @@ async def get_conversation_messages(conversation_id: str, user_id: str, cursor: 
                 is_accessible=record["attached_post"]["is_accessible"],
             )
 
-        attached_media = None
+        attached_media_urls = None
         if record["media_attachment_type"] and record["attached_media_url"]:
-            attached_media = MediaAttachment(
-                type=record["media_attachment_type"],
-                url=record["attached_media_url"],
-            )
+            attached_media_urls = [record["attached_media_url"]]
 
         reply_to = None
         if record["reply_to"]:
@@ -107,7 +183,7 @@ async def get_conversation_messages(conversation_id: str, user_id: str, cursor: 
                 created_at=record["reply_to"]["created_at"],
                 sender=SimpleUserResponse(**record["reply_to"]["sender"]),
                 attached_post=None,
-                attached_media=None,
+                attached_media_urls=None,
                 reply_to=None,
                 reactions=[],
             )
@@ -118,7 +194,7 @@ async def get_conversation_messages(conversation_id: str, user_id: str, cursor: 
             created_at=record["created_at"],
             sender=SimpleUserResponse(**record["sender"]),
             attached_post=attached_post,
-            attached_media=attached_media,
+            attached_media_urls=attached_media_urls,
             reply_to=reply_to,
             reactions=[MessageReaction(**r) for r in record["reactions"]],
         )
@@ -367,3 +443,339 @@ async def create_dating_chat(request: CreateDatingChatRequest, sender_id: str):
         }
     else:
         raise ValueError("Failed to create dating chat. Ensure there are exactly 2 participants and no blocking relationships.")
+
+
+from datetime import UTC, datetime
+from uuid import uuid4
+
+from fastapi import HTTPException
+
+from app.chat.schemas import (ConversationMessage, CreateDatingChatRequest,
+                              CreateGroupChatRequest, CreatePrivateChatRequest,
+                              MessageReaction, PostPreview)
+from app.shared.neo4j import driver
+from app.users.schemas import SimpleUserResponse
+
+
+async def create_group_chat_message(conversation_id: str, sender_id: str, content: str, attached_post_id: str | None = None, attached_media_urls: list[str] = [], reply_to_message_id: str | None = None) -> ConversationMessageEvent:
+    query = """
+    MATCH (sender:User {user_id: $sender_id})-[:PARTICIPATES_IN]->(c:Conversation:GroupChat {conversation_id: $conversation_id})
+    WHERE c.conversation_type = 'group'
+    CREATE (m:Message {
+        message_id: $message_id,
+        content: $content,
+        attached_media: $attached_media,
+        attached_post_id: $attached_post_id,
+        reply_to_message_id: $reply_to_message_id,
+        created_at: $created_at
+    })
+    CREATE (sender)-[:SENT]->(m)-[:IN]->(c)
+
+    WITH m, c, sender
+
+    OPTIONAL MATCH (reply_to:Message {message_id: m.reply_to_message_id})-[:IN]->(c)
+    OPTIONAL MATCH (reply_to)<-[:SENT]-(reply_sender:User)
+
+    WITH m, c, sender, reply_to, reply_sender
+
+    MATCH (participant:User)-[:PARTICIPATES_IN]->(c)
+    WHERE participant.user_id <> $sender_id
+    CREATE (participant)-[:UNREAD]->(m)
+
+    RETURN m {
+        .message_id,
+        .content,
+        .attached_media,
+        .attached_post_id,
+        .reply_to_message_id,
+        .created_at
+    } AS message,
+    sender {
+        .user_id,
+        .username,
+        .display_name,
+        .profile_photo
+    } AS sender,
+    CASE WHEN reply_to IS NOT NULL
+        THEN reply_to {
+            .message_id,
+            .content,
+            .created_at,
+            sender: reply_sender {
+                .user_id,
+                .username,
+                .display_name,
+                .profile_photo
+            }
+        }
+        ELSE null
+    END AS reply_to
+    """
+
+    params = {
+        "conversation_id": conversation_id,
+        "sender_id": sender_id,
+        "message_id": str(uuid4()),
+        "content": content,
+        "attached_media": attached_media_urls,
+        "attached_post_id": attached_post_id,
+        "reply_to_message_id": reply_to_message_id,
+        "created_at": datetime.now(UTC).isoformat(),
+    }
+
+    async with driver.session() as session:
+        result = await session.run(query, params)
+        record = await result.single()
+
+        if not record:
+            raise HTTPException(status_code=404, detail="Conversation not found or user is not a participant")
+
+        message_data = record["message"]
+        sender_data = record["sender"]
+        reply_to_data = record["reply_to"]
+
+        reply_to = None
+        if reply_to_data:
+            reply_to = ConversationMessage(
+                message_id=reply_to_data["message_id"],
+                content=reply_to_data["content"],
+                created_at=reply_to_data["created_at"],
+                sender=SimpleUserResponse(**reply_to_data["sender"]),
+                attached_post=None,  # We're not fetching this information for the replied message
+                attached_media_urls=None,  # We're not fetching this information for the replied message
+                reply_to=None,
+                reactions=[]
+            )
+
+        message = ConversationMessage(
+            message_id=message_data["message_id"],
+            content=message_data["content"],
+            created_at=message_data["created_at"],
+            sender=SimpleUserResponse(**sender_data),
+            attached_post=None,  # This needs to be fetched separately if needed
+            attached_media_urls=[url for url in message_data["attached_media"]] if message_data["attached_media"] else None,
+            reply_to=reply_to,
+            reactions=[]
+        )
+
+        if message_data["attached_post_id"]:
+            attached_post = await get_attached_post(message_data["attached_post_id"], sender_id)
+            message.attached_post = attached_post
+        res = message.model_dump()
+        res["conversation_id"] = conversation_id
+        return ConversationMessageEvent(**res)
+
+async def create_private_chat_message(conversation_id: str, sender_id: str, content: str, attached_post_id: str | None = None, attached_media_urls: list[str] = [], reply_to_message_id: str | None = None) -> ConversationMessageEvent:
+    query = """
+    MATCH (sender:User {user_id: $sender_id})-[:PARTICIPATES_IN]->(c:Conversation:PrivateChat {conversation_id: $conversation_id})
+    WHERE c.conversation_type = 'private'
+    CREATE (m:Message {
+        message_id: $message_id,
+        content: $content,
+        attached_media: $attached_media,
+        attached_post_id: $attached_post_id,
+        reply_to_message_id: $reply_to_message_id,
+        created_at: $created_at
+    })
+    CREATE (sender)-[:SENT]->(m)-[:IN]->(c)
+    WITH m, c, sender
+    OPTIONAL MATCH (reply_to:Message {message_id: m.reply_to_message_id})-[:IN]->(c)
+    OPTIONAL MATCH (reply_to)<-[:SENT]-(reply_sender:User)
+    WITH m, c, sender, reply_to, reply_sender
+    MATCH (participant:User)-[:PARTICIPATES_IN]->(c)
+    WHERE participant.user_id <> $sender_id
+    CREATE (participant)-[:UNREAD]->(m)
+
+    RETURN m {
+        .message_id,
+        .content,
+        .attached_media,
+        .attached_post_id,
+        .reply_to_message_id,
+        .created_at
+        } AS message,
+        sender {
+        .user_id,
+        .username,
+        .display_name,
+        .profile_photo
+        } AS sender,
+        CASE WHEN reply_to IS NOT NULL
+            THEN reply_to {
+            .message_id,
+            .content,
+            .created_at,
+            sender: reply_sender {
+                .user_id,
+                .username,
+                .display_name,
+                .profile_photo
+            }
+        }
+        ELSE null
+    END AS reply_to
+    """
+    params = {
+        "conversation_id": conversation_id,
+        "sender_id": sender_id,
+        "message_id": str(uuid4()),
+        "content": content,
+        "attached_media": attached_media_urls,
+        "attached_post_id": attached_post_id,
+        "reply_to_message_id": reply_to_message_id,
+        "created_at": datetime.now(UTC).isoformat(),
+    }
+
+    async with driver.session() as session:
+        result = await session.run(query, params)
+        record = await result.single()
+        if not record:
+            raise HTTPException(status_code=404, detail="Conversation not found or user is not a participant")
+        message_data = record["message"]
+        sender_data = record["sender"]
+        reply_to_data = record["reply_to"]
+
+        reply_to = None
+        if reply_to_data:
+            reply_to = ConversationMessage(
+                message_id=reply_to_data["message_id"],
+                content=reply_to_data["content"],
+                created_at=reply_to_data["created_at"],
+                sender=SimpleUserResponse(**reply_to_data["sender"]),
+                attached_post=None,  # We're not fetching this information for the replied message
+                attached_media_urls=None,  # We're not fetching this information for the replied message
+                reply_to=None,
+                reactions=[]
+            )
+        message = ConversationMessage(
+            message_id=message_data["message_id"],
+            content=message_data["content"],
+            created_at=message_data["created_at"],
+            sender=SimpleUserResponse(**sender_data),
+            attached_post=None,  # This needs to be fetched separately if needed
+            attached_media_urls=[url for url in message_data["attached_media"]] if message_data["attached_media"] else None,
+            reply_to=reply_to,
+            reactions=[]
+        )
+
+        if message_data["attached_post_id"]:
+            attached_post = await get_attached_post(message_data["attached_post_id"], sender_id)
+            message.attached_post = attached_post
+        res = message.model_dump()
+        res["conversation_id"] = conversation_id
+        return ConversationMessageEvent(**res)
+
+async def create_dating_chat_message(conversation_id: str, sender_id: str, content: str, attached_post_id: str | None = None, attached_media_urls: list[str] = [], reply_to_message_id: str | None = None) -> ConversationMessageEvent:
+    query = """
+    MATCH (sender:User {user_id: $sender_id})-[:PARTICIPATES_IN]->(c:Conversation:DatingChat {conversation_id: $conversation_id})
+    WHERE c.conversation_type = 'dating'
+    CREATE (m:Message {
+        message_id: $message_id,
+        content: $content,
+        attached_media: $attached_media,
+        attached_post_id: $attached_post_id,
+        reply_to_message_id: $reply_to_message_id,
+        created_at: $created_at
+    })
+    CREATE (sender)-[:SENT]->(m)-[:IN]->(c)
+    WITH m, c, sender
+    OPTIONAL MATCH (reply_to:Message {message_id: m.reply_to_message_id})-[:IN]->(c)
+    OPTIONAL MATCH (reply_to)<-[:SENT]-(reply_sender:User)
+    WITH m, c, sender, reply_to, reply_sender
+    MATCH (participant:User)-[:PARTICIPATES_IN]->(c)
+    WHERE participant.user_id <> $sender_id
+    CREATE (participant)-[:UNREAD]->(m)
+    RETURN m {
+        .message_id,
+        .content,
+        .attached_media,
+        .attached_post_id,
+        .reply_to_message_id,
+        .created_at
+        } AS message,
+        sender {
+        .user_id,
+        .username,
+        .display_name,
+        .profile_photo
+        } AS sender,
+        CASE WHEN reply_to IS NOT NULL
+            THEN reply_to {
+            .message_id,
+            .content,
+            .created_at,
+            sender: reply_sender {
+                .user_id,
+                .username,
+                .display_name,
+                .profile_photo
+            }
+        }
+        ELSE null
+    END AS reply_to
+    """
+    params = {
+        "conversation_id": conversation_id,
+        "sender_id": sender_id,
+        "message_id": str(uuid4()),
+        "content": content,
+        "attached_media": attached_media_urls,
+        "attached_post_id": attached_post_id,
+        "reply_to_message_id": reply_to_message_id,
+        "created_at": datetime.now(UTC).isoformat(),
+    }
+
+    async with driver.session() as session:
+        result = await session.run(query, params)
+        record = await result.single()
+        if not record:
+            raise HTTPException(status_code=404, detail="Conversation not found or user is not a participant")
+        message_data = record["message"]
+        sender_data = record["sender"]
+        reply_to_data = record["reply_to"]
+
+        reply_to = None
+        if reply_to_data:
+            reply_to = ConversationMessage(
+                message_id=reply_to_data["message_id"],
+                content=reply_to_data["content"],
+                created_at=reply_to_data["created_at"],
+                sender=SimpleUserResponse(**reply_to_data["sender"]),
+                attached_post=None,  # We're not fetching this information for the replied message
+                attached_media_urls=None,  # We're not fetching this information for the replied message
+                reply_to=None,
+                reactions=[]
+            )
+        message = ConversationMessage(
+            message_id=message_data["message_id"],
+            content=message_data["content"],
+            created_at=message_data["created_at"],
+            sender=SimpleUserResponse(**sender_data),
+            attached_post=None,  # This needs to be fetched separately if needed
+            attached_media_urls=[url for url in message_data["attached_media"]] if message_data["attached_media"] else None,
+            reply_to=reply_to,
+            reactions=[]
+        )
+
+        if message_data["attached_post_id"]:
+            attached_post = await get_attached_post(message_data["attached_post_id"], sender_id)
+            message.attached_post = attached_post
+        res = message.model_dump()
+        res["conversation_id"] = conversation_id
+        return ConversationMessageEvent(**res)
+
+async def is_post_accessible_to_user(post_id: str, user_id: str) -> bool:
+    query = """
+    MATCH (post:Post {post_id: $post_id})<-[:POSTED]-(author:User)
+    OPTIONAL MATCH (user:User {user_id: $user_id})
+    WHERE NOT (author)-[:BLOCKS]-(user) AND (NOT author.account_private OR (user)-[:FOLLOWS]->(author))
+    RETURN CASE
+        WHEN author IS NULL THEN false
+        WHEN NOT (author)-[:BLOCKS]-(user) AND (NOT author.account_private OR (user)-[:FOLLOWS]->(author)) THEN true
+        ELSE false
+    END AS is_accessible
+    """
+    async with driver.session() as session:
+        result = await session.run(query, {"post_id": post_id, "user_id": user_id})
+        record = await result.single()
+        return record["is_accessible"] if record else False

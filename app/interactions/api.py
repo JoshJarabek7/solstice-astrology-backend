@@ -9,9 +9,11 @@ from loguru import logger
 from app.interactions.schemas import (AddBookmarkEvent, AddBookmarkRequest,
                                       DeleteBookmarkEvent, LikedPostEvent,
                                       MatchEvent, SwipeRightEvent,
-                                      UnlikedPostEvent, ViewedPostEvent,
-                                      ViewedPostRequest, ViewedProfileEvent,
-                                      ViewedProfileRequest)
+                                      UnlikedPostEvent,
+                                      ViewedMajorSectionEvent,
+                                      ViewedMajorSectionRequest,
+                                      ViewedPostEvent, ViewedPostRequest,
+                                      ViewedProfileEvent, ViewedProfileRequest)
 from app.notifications.ws import WebSocketManager
 from app.shared.auth import get_current_user
 from app.shared.neo4j import driver
@@ -361,6 +363,84 @@ async def match_event(event: MatchEvent) -> None:
         await ws_manager.send_to_user(json.dumps(user_two_response), event.user_two)
 
 
+@router.subscriber("viewed.major.section.dating", group_id="viewed-major-section-dating-db")
+async def update_db_viewed_major_dating_event(event: ViewedMajorSectionEvent) -> None:
+    query = """
+    MATCH (user:User {user_id: $user_id})
+    SET user.last_checked_dating = $last_checked
+    RETURN user.last_checked_dating as updated_at
+    """
+    async with driver.session() as session:
+        result = await session.run(query, {"user_id": event.user_id, "last_checked": datetime.now(UTC).isoformat()})
+        record = await result.single()
+        if not record:
+            raise HTTPException(status_code=404, detail="User not found.")
+        return
+
+@router.subscriber("viewed.major.section.dating", group_id="alert-viewed-major-section-dating")
+async def alert_user_viewed_major_dating_event(event: ViewedMajorSectionEvent) -> None:
+    ws_manager = WebSocketManager()
+    data = {
+        "message_type": "alert-viewed-major",
+        "data": {
+            "section": event.section,
+            "last_checked": datetime.now(UTC).isoformat(),
+        }
+    }
+    await ws_manager.send_to_user(json.dumps(data), event.user_id)
+
+@router.subscriber("viewed.major.section.notifications", group_id="viewed-major-section-notifications-db")
+async def update_db_viewed_major_notifications_event(event: ViewedMajorSectionEvent) -> None:
+    query = """
+    MATCH (user:User {user_id: $user_id})
+    SET user.last_checked_notifications = $last_checked
+    RETURN user.last_checked_notifications as updated_at
+    """
+    async with driver.session() as session:
+        result = await session.run(query, {"user_id": event.user_id, "last_checked": datetime.now(UTC).isoformat()})
+        record = await result.single()
+        if not record:
+            raise HTTPException(status_code=404, detail="User not found.")
+        return
+
+@router.subscriber("viewed.major.section.notifications", group_id="alert-viewed-major-section-notifications")
+async def alert_user_viewed_major_notifications_event(event: ViewedMajorSectionEvent) -> None:
+    ws_manager = WebSocketManager()
+    data = {
+        "message_type": "alert-viewed-major",
+        "data": {
+            "section": event.section,
+            "last_checked": datetime.now(UTC).isoformat(),
+        }
+    }
+    await ws_manager.send_to_user(json.dumps(data), event.user_id)
+
+@router.subscriber("viewed.major.section.boops", group_id="viewed-major-section-boops-db")
+async def update_db_viewed_major_boops_event(event: ViewedMajorSectionEvent) -> None:
+    query = """
+    MATCH (user:User {user_id: $user_id})-[r:BOOP_RELATIONSHIP]-(boop:User)
+    SET user.last_checked_boops = $last_checked
+    RETURN user.last_checked_boops as updated_at
+    """
+    async with driver.session() as session:
+        result = await session.run(query, {"user_id": event.user_id, "last_checked": datetime.now(UTC).isoformat()})
+        record = await result.single()
+        if not record:
+            raise HTTPException(status_code=404, detail="User not found.")
+        return
+
+@router.subscriber("viewed.major.section.boops", group_id="alert-viewed-major-section-boops")
+async def alert_user_viewed_major_boops_event(event: ViewedMajorSectionEvent) -> None:
+    ws_manager = WebSocketManager()
+    data = {
+        "message_type": "alert-viewed-major",
+        "data": {
+            "section": event.section,
+            "last_checked": datetime.now(UTC).isoformat(),
+        }
+    }
+    await ws_manager.send_to_user(json.dumps(data), event.user_id)
+
 """---------------- API ROUTES -----------------"""
 
 @router.post("/api/profile/viewed")
@@ -443,4 +523,14 @@ async def delete_bookmark_route(bookmark_id: str, verified_user: VerifiedUser = 
             "bookmark_id": bookmark_id,
             "user_id": verified_user.user_id,
         },
+    )
+
+@router.post("/api/user/viewed/major/section/{section}", response_model=None)
+async def viewed_major_section_route(section: str, verified_user: VerifiedUser = Depends(get_current_user)) -> None:
+    await router.broker.publish(
+        topic="viewed.major.section.{section}",
+        message={
+            "section": section,
+            "user_id": verified_user.user_id,
+        }
     )

@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Literal, Optional
+from typing import Optional
 
 from pydantic import BaseModel
 
@@ -11,15 +11,20 @@ class PostPreview(BaseModel):
     content_preview: str | None
     user: SimpleUserResponse | None
     created_at: datetime
-    is_accessible: bool
+    is_accessible: bool | None = True
 
 class MessageReaction(BaseModel):
     emoji: str
     reactor_id: str
 
-class MediaAttachment(BaseModel):
-    type: Literal["image", "video"]
-    url: str
+class SendMessageRequest(BaseModel):
+    conversation_id: str
+    sender_id: str
+    content: str
+    attached_post_id: str | None = None
+    attached_media_urls: list[str] = []
+    reply_to_message_id: str | None = None
+
 
 class ConversationMessage(BaseModel):
     message_id: str
@@ -27,7 +32,7 @@ class ConversationMessage(BaseModel):
     created_at: datetime
     sender: SimpleUserResponse
     attached_post: PostPreview | None = None
-    attached_media: MediaAttachment | None = None
+    attached_media_urls: list[str] | None = None
     reply_to: Optional["ConversationMessage"] = None
     reactions: list[MessageReaction] = []
 
@@ -43,16 +48,8 @@ class CreateConversationRequest(BaseModel):
     participants: list[str]
     initial_message: InitialMessage
 
-class ConversationMessageEvent(BaseModel):
-    message_id: str
+class ConversationMessageEvent(ConversationMessage):
     conversation_id: str
-    content: str
-    created_at: datetime
-    sender_id: str
-    attached_post: PostPreview | None
-    attached_media: MediaAttachment | None
-    reply_to: ConversationMessage | None
-    reactions: list[MessageReaction]
 
 class CreateGroupChatRequest(BaseModel):
     participants: list[str] # All users in the group chat
