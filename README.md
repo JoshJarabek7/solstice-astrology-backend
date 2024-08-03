@@ -30,7 +30,7 @@ This repository contains the backend service for astrology and personality featu
 
 ### Recommendation Engine
 
-The main purpose of this codebase is to calculate compatibility between two people's entire astrological charts, as well as their 46 different personality traits. Think of it like Co-Star, Myers-Briggs, and Hinge merged into one. This service will be a component of the broader recommendation engine for suggesting posts, profiles, and potential matches. Other components will include psychological analysis scores and native multi-modal AI embeddings (video, text, images, etc.), all contributing to a generative adversarial network (GAN) for comprehensive recommendations.
+The main purpose of this codebase is to calculate compatibility between two people's entire astrological charts, as well as their 46 different personality traits. Think of it like Co-Star, Myers-Briggs, and Hinge merged into one. This service will be a component of the broader recommendation engine for suggesting posts, profiles, and potential matches. Other components will include psychological analysis scores and native multi-modal AI embeddings (video, text, images, etc.), all contributing to a generative adversarial network (GAN) for comprehensive recommendations. We've also integrated "Boops", which is our (more wholesome) rendition of the Facebook Poke.
 
 ### Gaming
 
